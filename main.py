@@ -24,7 +24,7 @@ parser.add_argument("--trials", "-t",
 options = parser.parse_args()
 
 # run gem5 config for some particular cache model
-def runConfig(binary, cacheModel):
+def run_config(binary, cacheModel):
     args = binary+" "+" -c "+cacheModel
     cmd = "build/X86/gem5.opt configs/IBLP/config.py "+args
     out = subprocess.check_output(cmd, shell=True, cwd="../gem5")
@@ -39,7 +39,7 @@ results = {"Item": {"Miss rate":0},
 
 for cache in options.cache_models:
     for i in range(trials):
-        runConfig(options.binary, cache)
+        run_config(options.binary, cache)
         # check stats.txt result
         f = open("/home/alan/Documents/thesis/gem5/m5out/stats.txt")
         lines = f.readlines()
