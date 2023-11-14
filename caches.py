@@ -1,10 +1,14 @@
 # located in gem5/configs/IBLP
 
+import json
 from m5.objects import Cache, SystemXBar
 
 # Note to self: are the values of these constant class properties correct/necessary?
 # They're just what was in the tutorial
 # Maybe some of them should be parameters?
+
+f = open("./configs/IBLP/options.json")
+options = json.load(f)
 
 # L1, instruction & data caches-->
 class L1Cache(Cache):
@@ -36,7 +40,7 @@ class InstructionCache(L1Cache):
 
 # L2, block & item cache layers-->
 class L2Cache(Cache):
-    assoc = 8
+    assoc = options["associativity"]
     tag_latency = 20
     data_latency = 20
     response_latency = 20
@@ -50,25 +54,24 @@ class L2Cache(Cache):
         self.mem_side = bus.cpu_side_ports
 
 class ItemCache(L2Cache):
-    # how to specify granularity?
-
-    def __init__(self, size="256kB"):
+    def __init__(self):
         super(L2Cache, self).__init__()
-        self.size = size
+        self.size = options["item_cache"]["size"]
+        # how to specify granularity?
 
 class BlockCache(L2Cache):
-    def __init__(self, size="256kB"):
+    def __init__(self):
         super(L2Cache, self).__init__()
-        self.size = size
+        self.size = options["block_cache"]["size"]
 
 class IBLPCache(ItemCache):
     # Block cache is wrapped in Item cache so that there's one thing to hand to System,
     # but since the bus ports are connected appropriately, I don't *think* it should matter.
-
-    def __init__(self, itemLayerSize="128kB", blockLayerSize="128kB"):
+    def __init__(self):
         super(ItemCache, self).__init__()
-        self.size = itemLayerSize
-        self.blockLayer = BlockCache(blockLayerSize)
+        self.size = options["item_layer"]["size"]
+        self.blockLayer = BlockCache()
+        self.blockLayer.size = options["item_layer"]["size"]
         self.bus = SystemXBar()
         self.mem_side = self.bus.cpu_side_ports
         self.blockLayer.cpu_side = self.bus.mem_side_ports

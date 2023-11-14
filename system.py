@@ -1,5 +1,6 @@
 # located in gem5/configs/IBLP
 
+import m5
 from m5.objects import *
 from caches import DataCache, InstructionCache, ItemCache, BlockCache, IBLPCache
 
@@ -66,6 +67,7 @@ class StreamlinedSystem(System):
         m5.instantiate()
 
         print("Beginning simulation...")
-        exit_event = m5.simulate() 
-        print(exit_event.getCause()) # need to format? what was the original syntax?
+        exit_event = m5.simulate()
+        print('Exiting @ tick {} because {}'
+          .format(m5.curTick(), exit_event.getCause()))
 
