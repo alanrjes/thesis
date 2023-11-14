@@ -19,8 +19,7 @@ class StreamlinedSystem(System):
         self.cpubus = L2XBar()
         self.membus = SystemXBar()
 
-    def setup_caches(self, cache_type, p=0.5):
-        # ^note: p is proportion of IBLP that is item cache (so 1-p is proportion block cache) out of 256kB total
+    def setup_caches(self, cache_type):
         self.cpu.icache = InstructionCache()
         self.cpu.dcache = DataCache()
         # connect L1 caches to CPU

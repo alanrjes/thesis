@@ -75,9 +75,6 @@ class IBLPCache(ItemCache):
         self.bus = SystemXBar()
         self.mem_side = self.bus.cpu_side_ports
         self.blockLayer.cpu_side = self.bus.mem_side_ports
-
-    def connectCPUSideBus(self, cpuBus):
-        self.cpu_side = cpuBus.mem_side_ports
     
     def connectMemSideBus(self, memBus):
         self.blockLayer.mem_side = memBus.cpu_side_ports
