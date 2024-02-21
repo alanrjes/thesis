@@ -1,0 +1,172 @@
+% !TEX root = /home/Documents/thesis/draft/thesis.tex
+\documentclass[12pt,twoside]{reedthesis}
+
+\usepackage{graphicx,latexsym}
+\usepackage{amssymb,amsthm,amsmath}
+\usepackage{longtable,booktabs,setspace}
+\usepackage{fancyvrb}
+\usepackage[hyphens]{url}
+\usepackage{rotating}
+\usepackage{listings}
+\usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
+\addbibresource{thesis.bib}
+
+\lstset{	% for source code formatting
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+\title{Simulating Granularity-Change Caching \\ for Realistic Scalable Systems}
+\author{Alan R. Jessup}
+% The month and year that you submit your FINAL draft TO THE LIBRARY (May or December)
+\date{May 2024}
+\division{Mathematics and Natural Sciences}
+\advisor{Charles McGuffey}
+\department{Computer Science}
+
+\setlength{\parskip}{0pt}
+\begin{document}
+
+\maketitle
+\frontmatter % this stuff will be roman-numbered
+\pagestyle{empty}
+
+\tableofcontents
+
+% If your abstract is longer than a page, there may be a formatting issue.
+\chapter*{Abstract}
+
+...
+
+\mainmatter
+\pagestyle{fancyplain}
+
+\chapter*{Introduction}
+	\addcontentsline{toc}{chapter}{Introduction}
+	\chaptermark{Introduction}
+	\markboth{Introduction}{Introduction}
+	\setcounter{chapter}{0}
+	\setcounter{section}{0}
+
+\section{A crash course in computer caching}
+A cache is part of the memory hierarchy in a computer system, where information is stored short-term for use by active processes. (...Describe structure of a cache)
+
+\;\\ (make figure) \\
+
+(...make this a fig. caption : This is a diagram illustrating the structure of a typical cache.)
+
+\;\\
+
+Since a cache is the first place a processor will look for data requested from memory, they're designed to be small and fast, and to hold data that is likely to be needed based on \textit{spacial} and \textit{temporal} locality.
+
+	\subsection*{Spacial versus temporal locality}
+	Locality is a characteristic of data which caches can use to predict what data is likely to be needed next, in order to store that data and reduce latency.
+	
+	Data with high temporal locality has been used recently; therefore, it is typically more likely to be needed again than any arbitrary other piece of data. Temporal locality is the more common characteristic used in caching, since it can be as simple as a first-in-first-out (FIFO) queue and is relatively efficient for a wide variety of processes.
+	
+	Data with spacial locality is data that is located near other data that is being used. This can be useful in specific cases where a large amount of data is stored sequentially, such as frames of a video. Spatial locality is much less well-studied than temporal locality, which the paper Beckmann et. al. aims to improve through introduction of the granularity-change caching problem.
+
+	\subsection*{Variables in caching for realistic large-scale systems}
+	Replacement policies, multithreading, ...
+
+\section{The granularity-change caching problem}
+The 2021 paper ``Spatial Locality and Granularity Change in Caching'' describes and provides a theoretical analysis of the Granularity-Change (GC) Caching Problem, which ``modifies the traditional caching setup by grouping data items into blocks, such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}. This allows a cache to take advantage of both spatial and temporal locality, and creates an opportunity to study tradeoffs of cache space usage between the temporally determined ``item cache'' versus the spatially oriented ``block cache''. For the purpose of implementation, Beckmann et. al. describes the deterministic replacement policy \textit{Item-Block Layer Partitioning}.
+
+	\subsection*{Item-Block Layered Partitioning}
+	...
+
+\section{Prior work simulating GC caching}
+In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Caching Problem'', by Maxx Curtis, follows-up the theoretical work of Beckmann et. al. on the granularity-change caching problem by providing a foray into practical simulation of the proposed cache model. Curtis provides a survey of two systems simulators, Zsim and Gem5, and a presents a custom implementation of a block Cache in Gem5 to be used in conjunction with standard Gem5 caches to simulate granularity-change within simple systems \cite{curtis}.
+
+	\subsection*{Results of Curtis}
+	The Curtis thesis found 
+
+	\subsection*{Suggestions for future work}
+	...
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Cache Simulation in Gem5}
+
+\section{Background on Gem5 cache models}
+
+	Due to the origins of Gem5 as a combination of two different systems simulation projects, m5 and GEMS, Gem5 contains two separate subsystems that can be used to model caches. The \textit{classic} cache model from m5 provides simple, modular functionality for multi-level caches, but with an inflexible 
+
+\section{The classic cache model}
+
+	My first approach for this thesis was to simulate IBLP in the method suggested by the Curtis thesis: ``by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency'' \cite{curtis}. Since this wouldn't require more detailed cache coherence than a two-layer cache (check that this is true and explain why?), this would be implemented using classic caches.
+
+	\subsection*{Architecture of a classic cache implementation}
+	...
+
+	\subsection*{Critical drawbacks}
+	The variable for cache line size in Gem5 is set at the system level, rather than at the cache level, and there is no clear way to modify the line size in an individual cache instance using only the available classic cache objects. This prevents our approach to implementing an IBLP cache using solely classic cache objects.
+
+\section{The Ruby cache model}
+
+	Since the classic cache model wouldn't meet the requirements to simulate an IBLP cache, I turned to the Ruby cache, to see if the more detailed model had a way of overriding the system-wide line size requirement for a similar implementation using stacked or nestled caches.
+
+	\subsection*{...}
+	...
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Tests / Next Simulator}
+
+\section{Something or other}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter*{Conclusion}
+    \addcontentsline{toc}{chapter}{Conclusion}
+	\chaptermark{Conclusion}
+	\markboth{Conclusion}{Conclusion}
+
+\section{Results}
+
+...
+
+\section{Future work}
+
+...
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\chapter{Glossary}
+
+\def\arraystretch{1.5}
+\begin{tabular}{p{1.5in}p{3.8in}}
+    \hline
+    \textbf{Term}       & \textbf{Definition} \\
+    \hline
+    Line                & A portion of a cache that contains one \textit{block} of data. \\
+    Block               & In the context of general caching, a standard amount of data. \\
+    Granularity         & The size of a data \textit{block}, i.e. cache \textit{line}. A higher granularity has a larger block size, and lower vice versa. \\
+    Block (granularity) & In granularity-change caching, \textit{block} specifically refers to the lower-granularity size. \\
+    Item (granularity)  & In a GC cache model, an \textit{item} is the higher-granularity line size. \\
+    Hit rate            &
+\end{tabular}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Source Code and Documentation}
+
+\section{Simulation config}
+
+\subsection*{Caches}
+\lstinputlisting{code/msi_caches.py}
+\;\\
+
+\subsection*{Runfile (Config)}
+\lstinputlisting{code/simple_ruby.py}
+\;\\
+
+\section{Test scripts}
+
+...
+
+\backmatter % backmatter makes the index and bibliography appear properly in the t.o.c...
+
+\nocite{*}
+\addcontentsline{toc}{chapter}{References}
+\printbibliography[title=References]
+
+\end{document}
