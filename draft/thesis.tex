@@ -13,8 +13,6 @@
 \usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
 \addbibresource{thesis.bib}
 
-\newcommand{\vrb}[1]{\Verb!#1!}
-
 \lstset{	% for source code formatting
 basicstyle=\small\ttfamily,
 columns=flexible,
@@ -156,32 +154,80 @@ With the results and suggestions of the Curtis thesis in mind, my approach to fu
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Cache Simulation in Gem5}
+\chapter{Cache Implementation in Gem5}
 
-\section{Background on Gem5 cache models}
+\section{Overview of Gem5}
 
-	Due to the origins of Gem5 as a combination of two different systems simulation projects, m5 and GEMS, Gem5 contains two separate subsystems that can be used to model caches. The \textit{classic} cache model from m5 provides simple, modular functionality for multi-level caches, but with an inflexible MOESI cache coherence protocol. The \textit{Ruby} cache model has more complex implementation details, with the ability to test customized cache coherence protocols.
+Gem5 is an open-source, community-led computer computer systems simulation project that describes itself as: \begin{quote}
+	...a modular platform for computer-system architecture research, encompassing system-level architecture as well as processor microarchitecture. \cite{gem5-about}
+\end{quote}
 
-	My first approach to simulate IBLP was to follow the method suggested by the Curtis thesis: ``by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency'' \cite{curtis}.
+Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}.
+
+	\subsection*{Caching subsystems}
+
+	Due to its origins as a combination of m5 and GEMS, Gem5 contains two separate subsystems that can both be used to model caches. The \textit{classic} cache model from m5 provides simple, modular functionality for multi-level caches, but with an inflexible MOESI cache coherence protocol. The \textit{Ruby} cache model has more complex implementation details, with the ability to test customized cache coherence protocols.
 
 \section{Initial classic cache implementation}
 
-	I began by implementing a nestled cache structure using classic Gem5 caches.
+	I began by implementing a nestled cache structure using classic Gem5 caches. This involved first building a simple cache configuration following the Gem5 documentation's ``Getting Started'' tutorial, then modifying the cache bus configuration to support a nestled block layer and writing a wrapper program to perform trials and collect data from the simulation.
+
+	\subsection*{Config files}
+
+	A Gem5 configuration is defined by a python file in the ``configs'' directory. To run a config, the path to this file is given to the appropriate build command for the config's architecture, along with any arguments such as the path of the script to simulate.
+	
+	Contained within a config file are the commands to create a system object, set up a system, and start a simulation.
 
 	\subsection*{System class}
-	For the purpose of organizing and modularizing the facets of the Gem5 system configuration that don't need to be modified for IBLP, I implemented the system setup in a new class, \vrb{StreamlinedSystem}, which inherits the Gem5 \vrb{System} class and adds methods which takes care of setting up the components of a typical system for simulation and piecing together the components of the IBLP cache. [See appendix \#?]
+
+	For the purpose of organizing and modularizing the facets of the Gem5 system configuration that are peripheral to the IBLP implementation, such as processor initialization and simulation execution, I implemented the system setup in a new class, \verb`StreamlinedSystem`. This class inherits the Gem5 \verb`System`' class and adds the following methods to take care of setting up the components of a typical system for simulation and piecing together the components of the IBLP cache:
+
+	\begin{itemize}
+		\item \verb`__init__(self)` sets up the system attributes that are needed for setting up other features: clock, voltage, memory mode and ranges, cpu, and busses for between L1 and L2 caches.
+	
+		\item \verb`setup_caches(self, cache_type)` sets up and connects busses to the caches: the L1 instruction and data caches, which have constant configurations, and the L2 cache, which is configured as either an Item, Block, or IBLP cache.
+	
+		\item \verb`setup_memory(self)` sets up the main memory and connects it to the L2 cache bus.
+	
+		\item \verb`run(self, binary)` sets the simulation up to run as a process, and runs it.
+	\end{itemize}
+
+	The specific commands for of most of these steps, except for \verb`setup_caches`, are adapted from the gem5 tutorial \cite{gem5-tutorial}.
 
 	\subsection*{Cache objects}
 
-	...
+	A basic classic cache configuration requires minor setup of cache objects and busses; this encompasses L1 data and instruction caches, which are specialized caches with ports specified in the System object, and a general L2 cache which I adapted into a nestled item and block cache:
 
-	\subsection*{Granularity scope}
+	\begin{itemize}
+		\item \verb`L1Cache`, \verb`DataCache`, and \verb`InstructionCache` are adapted from the gem5 basic caches tutorial to mimic the typical on-processor data and instruction caches in an ordinary system.
+	
+		\item \verb`L2Cache` contains the attributes of a typical L2 cache that are shared by both item and block caches.
+	
+		\item \verb`ItemCache` and \verb`BlockCache` inherit from \verb`L2Cache` and set up the structure for the two-part IBLP cache.
+	
+		\item \verb`IBLPCache(ItemCache)` simulates an IBLP cache by using an item cache, connected on the memory-side to a block cache, with attributes set so that there is minimal latency between these two caches. The method \verb`connectMemSideBus` is altered to connect the block layer to the memory bus, to imitate the way the memory connects to layers in the IBLP cache model.
+	\end{itemize}
 
-	...
+	\subsection*{Variable parameters}
 
-\section{Ruby modeling investigation}
+	Since there are a number of parameters of the cache objects that should be adjusted and fine-tuned during testing, I created \verb`options.json` to be read by the file where the cache objects are defined, and used to set cache attributes accordingly.
 
-	Since the classic cache model failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache, to see if the more detailed model had a way of overriding the system-wide line size requirement for a similar implementation using stacked or nestled caches.
+
+	\subsection*{Wrapper}
+
+	The wrapper file \verb`main.py` runs Gem5 with the config and measures the output written to \verb`stats.txt` at the end of each simulation. It's necessary that statistics be collected using a file outside the config because gem5 doesn't write to `stats.txt` until the simulation has terminated, and doesn't make these available during the running of a simulation.
+
+	The wrapper takes the three arguments to customize trials: the path to the binary of the script to simulate, the cache models to be tested (out of Block, Item, and IBLP), and the number of trials to run of each cache type.
+
+\section{Granularity limitations}
+
+	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, assumably through a cache object attribute, to specify the line size for any given layer of memory.
+
+	Instead, Gem5 sets an attribute for line size at the level of the \verb`System` class. This prevents any possibly implementation of granularity-change caches in classic caches without modification of Gem5's \verb`System` and \verb`Cache` classes to allow specification of a larger line size for memory.
+
+\section{A look at Ruby for changing granularity}
+
+	Since my initial classic cache implementation failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache system to see if the more detailed model had a way of overriding the system-wide line size requirement.
 
 	\subsection*{...}
 
