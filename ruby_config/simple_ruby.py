@@ -38,14 +38,17 @@ IMPORTANT: If you modify this file, it's likely that the Learning gem5 book
 
 # import the m5 (gem5) library created when gem5 is built
 import m5
+
+# import all of the SimObjects
 from m5.objects import *
 
 # Needed for running C++ threads
-m5.util.addToPath("../")
+m5.util.addToPath("../../")
 from common.FileSystemConfig import config_filesystem
 
-# Import caches
-from msi_caches import IBLPCacheSystem
+# You can import ruby_caches_MI_example to use the MI_example protocol instead
+# of the MSI protocol
+from msi_caches import MyCacheSystem
 
 # create the system we are going to simulate
 system = System()
@@ -72,7 +75,7 @@ for cpu in system.cpu:
     cpu.createInterruptController()
 
 # Create the Ruby System
-system.caches = IBLPCacheSystem()
+system.caches = MyCacheSystem()
 system.caches.setup(system, system.cpu, [system.mem_ctrl])
 
 # Run application and use the compiled ISA to find the binary

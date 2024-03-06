@@ -44,7 +44,7 @@ from m5.util import (
 )
 
 
-class IBLPCacheSystem(RubySystem):
+class MyCacheSystem(RubySystem):
     def __init__(self):
         if buildEnv["PROTOCOL"] != "MSI":
             fatal("This system assumes MSI from learning gem5!")

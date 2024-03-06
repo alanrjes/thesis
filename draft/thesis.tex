@@ -19,7 +19,7 @@ columns=flexible,
 breaklines=true
 }
 
-\title{Simulating Granularity-Change Caching \\ for Realistic Scalable Systems}
+\title{A Continued Inquiry into Granularity-Change Cache Simulation}
 \author{Alan R. Jessup}
 % The month and year that you submit your FINAL draft TO THE LIBRARY (May or December)
 \date{May 2024}
@@ -74,7 +74,7 @@ Computer memory is the fundamental component of digital systems that serves as a
 
 	\subsection*{Caches in realistic systems}
 
-	Although [??upper/lower bounds/competitive ratios??] for cache models can be proven using theoretical analysis to give a general idea of how a cache model should perform, realistic estimations of cache performance in complex systems require testing to measure outcomes. The introduction of multiprocessing requires \textit{cache coherence protocols} to maintain consistency across shared memory resources, and multiprocessing adds variable of uncertainty into cache performance, since the structure of a specific processor's cache hierarchy or a particular program's implementation of parallelism can complicate cache behavior.
+	Although measures of performance such as upper and lower bounds and competitive ratios can be proven for cache models using theoretical analysis and can give a general idea of how a cache model should perform, realistic estimations of cache performance in complex systems require testing to measure outcomes. The introduction of multiprocessing requires \textit{cache coherence protocols} to maintain consistency across shared memory resources, and multiprocessing adds variable of uncertainty into cache performance, since the structure of a specific processor's cache hierarchy or a particular program's implementation of parallelism can complicate cache behavior.
 
 \section{The granularity-change caching problem}
 
@@ -180,7 +180,7 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 	\subsection*{System class}
 
-	For the purpose of organizing and modularizing the facets of the Gem5 system configuration that are peripheral to the IBLP implementation, such as processor initialization and simulation execution, I implemented the system setup in a new class, \verb`StreamlinedSystem`. This class inherits the Gem5 \verb`System`' class and adds the following methods to take care of setting up the components of a typical system for simulation and piecing together the components of the IBLP cache:
+	For the purpose of organizing and modularizing the facets of the Gem5 system configuration that are peripheral to the IBLP implementation, such as processor initialization and simulation execution, I implemented the system setup in a new class, \verb`StreamlinedSystem`. This class inherits the Gem5 \verb`System` class and adds the following methods to take care of setting up the components of a typical system for simulation and piecing together the components of the IBLP cache:
 
 	\begin{itemize}
 		\item \verb`__init__(self)` sets up the system attributes that are needed for setting up other features: clock, voltage, memory mode and ranges, cpu, and busses for between L1 and L2 caches.
@@ -212,8 +212,10 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 	Since there are a number of parameters of the cache objects that should be adjusted and fine-tuned during testing, I created \verb`options.json` to be read by the file where the cache objects are defined, and used to set cache attributes accordingly.
 
+	[NOTE TO SELF: Elaborate on each such parameter here if I get as far as setting/testing them. N/A if not using this implementation, or maybe still elaborate as additional vocab for background/context? Associativity etc.]
 
-	\subsection*{Wrapper}
+
+	\subsection*{Wrapper script}
 
 	The wrapper file \verb`main.py` runs Gem5 with the config and measures the output written to \verb`stats.txt` at the end of each simulation. It's necessary that statistics be collected using a file outside the config because gem5 doesn't write to `stats.txt` until the simulation has terminated, and doesn't make these available during the running of a simulation.
 
@@ -221,15 +223,62 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 \section{Granularity limitations}
 
-	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, assumably through a cache object attribute, to specify the line size for any given layer of memory.
+	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, such as through a cache object attribute, to specify the line size for any given layer of memory.
 
 	Instead, Gem5 sets an attribute for line size at the level of the \verb`System` class. This prevents any possibly implementation of granularity-change caches in classic caches without modification of Gem5's \verb`System` and \verb`Cache` classes to allow specification of a larger line size for memory.
 
-\section{A look at Ruby for changing granularity}
 
-	Since my initial classic cache implementation failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache system to see if the more detailed model had a way of overriding the system-wide line size requirement.
+\section{Considering Ruby for granularity change}
 
-	\subsection*{...}
+	Since my initial classic cache implementation failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache system to see if the more detailed cache model includes a way of overriding the system-wide line size requirement.
+
+	\subsection*{Overview of Ruby}
+
+	Ruby provides a detailed system for simulating memory systems with a wide array of configurations, including ``inclusive/exclusive cache hierarchies with various replacement policies, coherence protocol implementations, interconnection networks, DMA and memory controllers'', and more \cite{gem5-ruby}.
+
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=4.5in]{figures/ruby.jpg}
+		\caption{A graphic from GEMS visualizing Ruby's components \cite{gem5-ruby}.}
+	\end{figure}
+
+	For my purpose, a simple but realistic memory system is sufficient to model IBLP, so most of the features of a Ruby cache system are unnecessary. However, implementation of a granularity-change-capable cache in Ruby would provide countless options for future research studying the intersection of granularity-change in caches with other complicating variables.
+
+	\subsection*{Cache coherence specification}
+
+	Ruby specifies cache coherence protocols using ``Specification Language for Implementing Cache Coherence'' (SLICC). These files are written in the ``src'' directory, and have to be compiled with a new build of Gem5, unlike configs. They do not provide any interaction with memory allocation that would allow for manipulation of cache granularity.
+
+	\subsection*{Ruby architecture}
+
+	Unlike classic caches, where cache objects are each individually connected with the system, Ruby cache objects are defined as cache controllers within a network and configured within a cache system.
+	
+	In the example from ``Learning Gem5'', the cache system named \verb`MyCacheSystem` is configured with a \verb`L1Cache` that inherits \verb`L1Cache_Controller`, a \verb`DirController` that inherits \verb`Directory_Controller`, and a memory network \verb`MyNetwork` inheriting \verb`SimpleNetwork` \cite{gem5-tutorial}.
+
+	Since the matter of implementing granularity-change caching only concerns the architecture within a particular cache, only the \verb`L1Cache` is of significance. The \verb`L1Cache` object is defined with the following methods: \begin{itemize}
+		\item \verb`versionCount` and \verb`getBlockSizeBits` are simple helpers for \verb`__init__`
+		\item \verb`__init__` initializes the memory controller by defining its memory and connecting it to the system components
+		\item \verb`sendEvicts` and \verb`connectQueues` manage components of cache coherence
+	\end{itemize}
+
+	Within \verb`__init__`, the memory definition provides the only config-level mention of block size: \begin{verbatim}
+self.cacheMemory = RubyCache(
+    size="16kB", assoc=8, start_index_bit=self.getBlockSizeBits(system)
+)\end{verbatim}
+
+	The helper \verb`getBlockSizeBits` here is a simple conversion of the system-level line size value. Although its invocation here can't be manipulated to modify the line size, since it only determines the start bit offset, its presence suggests that the system line size may only be communicated to the cache level over a few select definitions. This indicates as a possible course of action the possibility of modifying these definitions within the existing cache classes to isolate and reassign their line size value.
+
+	\subsection*{Limitations and implications}
+
+	Since the Ruby caches, like the classic caches, operate under the assumption of a constant system-wide line size, there is no straightforward way to modify the granularity of individual memory layers using Ruby.
+
+	Furthermore, the complexity of the Ruby subsystem is such that it would not be advisable to implement IBLP in Ruby unless specifically for the purpose of studying granularity-change caching in conjunction with features specific to Ruby, such as cache coherence.
+
+	However, the definition of cache memory shown in Ruby suggests sufficient modularity as to potentially alter granularity at the level of cache class definitions. This approach could potentially be more easily applied to the classic cache subsystem.
+
+
+\section{An attempt to override system granularity}
+
+	My final approach to implementing IBLP using existing Gem5 caches is to modify the existing classic cache definitions to allow the line size of lower memory levels to be changed. In addition to allowing my initial classic cache implementation of IBLP to model granularity-change, this would also open the option of flexible granularity to other cache configurations using simple caches.
 
 	...
 
@@ -259,6 +308,7 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
     \hline
     \textbf{Term}       & \textbf{Definition} \\
     \hline
+	Associativity		& ... \\
 	Block               & In the context of general caching, a standard amount of data. \\
 	Block (GC-cache)	& In granularity-change caching, \textit{block} specifically refers to the lower-granularity line size. \\
 	Cache coherence		& ... \\
