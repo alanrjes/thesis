@@ -31,16 +31,14 @@ def push_files():
 
     files = os.listdir(here + local_config)
     for fname in files:
-        if fname=="README":
-            continue
         # copy to Gem5 configs subdirectory
         shutil.copy(here + local_config + "/" + fname, here + "/gem5/configs" + local_config)
         # copy to draft subdirectory
         shutil.copy(here + local_config + "/" + fname, here + "/draft/code" + local_config)
 
 # run gem5 config for some particular cache model
-def run_config(binary, cacheModel):
-    cmd = "build/X86/gem5.opt configs/classic_config/config.py "+binary
+def run_config(binary, cacheType):
+    cmd = "build/X86/gem5.opt configs/classic_config/config.py "+binary+" -c "+cacheType
     out = subprocess.check_output(cmd, shell=True, cwd="./gem5")
     return out.decode('utf-8').split("\n")[-1]
 
@@ -56,12 +54,15 @@ results = {"Item": {"Miss rate":0},
 for cache in ["Item", "Block", "IBLP"]:
     for i in range(trials):
         run_config(options.binary, cache)
-        # check stats.txt result
+        # check gem5/m5out/stats.txt result
         f = open("/home/alan/Documents/thesis/gem5/m5out/stats.txt")
         lines = f.readlines()
         if cache == "IBLP":
+            # item layer:
             results[cache]["Item layer miss rate"] += float(lines[411].split()[1])   # line 412, system.l2cache.overallMissRate::total
-            results[cache]["Block layer miss rate"] += float(lines[519].split()[1])  # line 520, system.l2cache.blockLayer.overallMissRate::total
+            l = lines[519].split() # line 520, system.l2cache.blockLayer.overallMissRate::total
+            assert l[0] == "system.l2cache.blockLayer.overallMissRate::total", "Stats.txt did not record block cache correctly"
+            results[cache]["Block layer miss rate"] += float(l[1])
         else:
             results[cache]["Miss rate"] += float(lines[411].split()[1])   # line 412, system.l2cache.overallMissRate::total
     results[cache] = {k : results[cache][k]/trials for k in results[cache].keys()}

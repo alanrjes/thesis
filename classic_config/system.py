@@ -2,10 +2,12 @@
 
 import m5
 from m5.objects import *
-from caches import DataCache, InstructionCache, ItemCache, BlockCache, IBLPCache
+from caches import DataCache, InstructionCache, L2Cache, IBLPCache
 import pprint
+import json
 
-# most of this code is straight from the tutorial, just relocated to the System obj init to streamline things
+f = open("./configs/classic_config/options.json")
+options = json.load(f)
 
 class StreamlinedSystem(System):
     def __init__(self):
@@ -31,13 +33,16 @@ class StreamlinedSystem(System):
         self.cpu.icache.connectBus(self.cpubus)
         self.cpu.dcache.connectBus(self.cpubus)
         if (cache_type == "Item"):
-            self.l2cache = ItemCache()
+            self.cache_line_size = options["item_layer"]["granularity"]
+            self.l2cache = L2Cache(options)
         elif (cache_type == "Block"):
-            self.l2cache = BlockCache()
+            self.cache_line_size = options["block_layer"]["granularity"]
+            self.l2cache = L2Cache(options)
         elif (cache_type == "IBLP"):
-            self.l2cache = IBLPCache()
+            # change memory line size here (does this also affect busses? How will conversion work?)
+            self.l2cache = IBLPCache(options)
         else:
-            raise ValueError("Cache type is "+str(cache_type))
+            raise ValueError("Cache type is not supposed to be "+str(cache_type))
         # connect L2 cache to L2 & mem busses
         self.l2cache.connectCPUSideBus(self.cpubus)
         self.l2cache.connectMemSideBus(self.membus)
@@ -71,7 +76,7 @@ class StreamlinedSystem(System):
         print('Exiting @ tick {} because {}'
           .format(m5.curTick(), exit_event.getCause()))
 
-        f = open("cache_properties.txt", "w")
-        f.write(pprint.pformat(vars(self.l2cache)))     # for debugging purposes
+        f = open("system_properties.txt", "w")
+        f.write(pprint.pformat(vars(self)))     # for debugging purposes
         f.close()
 

@@ -1,21 +1,15 @@
 {
   "associativity": 8,
 
+  "cache_size": 256,
+
   "item_layer": {
-    "size": "128kB",
-    "granularity": "64B"
+    "proportion": 0.5,
+    "granularity": 16
   },
 
   "block_layer": {
-    "size": "128kB",
-    "granularity": "??"
-  },
-
-  "item_cache": {
-    "size": "256kB"
-  },
-
-  "block_cache": {
-    "size": "256kB"
+    "proportion": 0.5,
+    "granularity": 64
   }
 }
