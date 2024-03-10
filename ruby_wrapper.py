@@ -16,7 +16,7 @@ def push_files():
         # copy to Gem5 configs subdirectory
         shutil.copy(here + local_config + "/" + fname, here + "/gem5/configs" + local_config)
         # copy to draft subdirectory
-        shutil.copy(here + local_config + "/" + fname, here + "/draft/code")
+        shutil.copy(here + local_config + "/" + fname, here + "/draft/code" + local_config)
 
 def run_config():
     cmd = "build/X86_MSI/gem5.opt configs" + local_config + run_file
