@@ -34,12 +34,12 @@ class StreamlinedSystem(System):
         self.cpu.dcache.connectBus(self.cpubus)
         if (cache_type == "Item"):
             self.cache_line_size = options["item_layer"]["granularity"]
-            self.l2cache = L2Cache(options)
+            self.l2cache = L2Cache(options, self.cache_line_size)
         elif (cache_type == "Block"):
             self.cache_line_size = options["block_layer"]["granularity"]
-            self.l2cache = L2Cache(options)
+            self.l2cache = L2Cache(options, self.cache_line_size)
         elif (cache_type == "IBLP"):
-            # change memory line size here (does this also affect busses? How will conversion work?)
+            self.cache_line_size = options["item_layer"]["granularity"]
             self.l2cache = IBLPCache(options)
         else:
             raise ValueError("Cache type is not supposed to be "+str(cache_type))

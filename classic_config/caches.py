@@ -2,6 +2,17 @@
 
 from m5.objects import Cache, SystemXBar
 
+
+# Adjust latency for IBLP bus
+class IBLPXBar(CoherentXBar):
+    width = 16
+    frontend_latency = 0
+    forward_latency = 0
+    response_latency = 0
+    snoop_response_latency = 0
+    snoop_filter = SnoopFilter(lookup_latency=0)
+
+
 # L1, instruction & data caches-->
 class L1Cache(Cache):
     assoc = 2
@@ -38,13 +49,14 @@ class L2Cache(Cache):
     mshrs = 20
     tgts_per_mshr = 12
 
-    def __init__(self, options, cache_type="standard"):
-        super(L2Cache, self).__init__()
-        self.assoc = options["associativity"]
-        if cache_type in ["block_layer, item_layer"]:
-            self.size = str(options[cache_type]["proportion"]*options["cache_size"])+"kB"
+    def __init__(self, options, cache_granularity="standard"):
+        if cache_granularity in ["block_layer, item_layer"]:
+            super(L2Cache, self).__init__(options[cache_granularity]["granularity"])
+            self.size = str(options[cache_granularity]["proportion"]*options["cache_size"])+"kB"
         else:
+            super(L2Cache, self).__init__(cache_granularity)
             self.size = str(options["cache_size"])+"kB"
+        self.assoc = options["associativity"]
 
     def connectCPUSideBus(self, bus):
         self.cpu_side = bus.mem_side_ports
@@ -56,7 +68,7 @@ class IBLPCache(L2Cache):
     def __init__(self, options):
         super(IBLPCache, self).__init__(options, "item_layer")
         self.blockLayer = L2Cache(options, "block_layer")
-        self.bus = SystemXBar()
+        self.bus = IBLPXBar()
         self.mem_side = self.bus.cpu_side_ports
         self.blockLayer.cpu_side = self.bus.mem_side_ports
     
