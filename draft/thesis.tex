@@ -273,14 +273,13 @@ self.cacheMemory = RubyCache(
 
 	Furthermore, the complexity of the Ruby subsystem is such that it would not be advisable to implement IBLP in Ruby unless specifically for the purpose of studying granularity-change caching in conjunction with features specific to Ruby, such as cache coherence.
 
-
 \section{A closer look at system-scope granularity}
 
-	The final possibility of implementing IBLP using existing Gem5 cache objects would be if simple modifications could be made to the Gem5 source code to change the granularity parameter, where it receives the system-assigned line size, to instead use a custom line size value.
+	The final possibility of implementing IBLP using existing Gem5 cache objects would be if relatively small modifications could be made to the Gem5 source code to change the granularity parameter, where it receives the system-assigned line size, to instead use a custom line size value.
 
 	\subsection*{Cache interface source code}
 
-	I began by inspecting the file \verb`Cache.py` in the directory \verb`gem5/src/mem/cache`, where the python interface for the classic cache object is defined. This file contains python interfaces for the following C++ classes:
+	I began by inspecting the Python interface for the classic cache base object, defined in \verb`gem5/src/mem/cache/Cache.py`. This file contains python interfaces for the following C++ classes:
 	\begin{itemize}
 		\item \verb`Clusivity`, an enum type object used to specify the behavior of a cache in regard to upstream caches as ``mostly inclusive'' or ``mostly exclusive''.
 		\item \verb`WriteAllocator`, which is used for allocating memory for cache writes and invokes \verb`Parent.cache_line_size` to set its own \verb`block_size` attribute.
@@ -289,50 +288,41 @@ self.cacheMemory = RubyCache(
 		\item \verb`NoncoherentCache`, to use as a last-level cache in multiprocessor systems.
 	\end{itemize}
 
-	At the interface level alone, the most that could be done to alter granularity of a specific cache is to overwrite \verb`WriteAllocator.block_size` with a new parameter, either passed down through the `Cache` constructor or through the same \verb`Parent` that \verb`cache_line_size` belongs to. \verb`Parent` in this context is presumably a \verb`System` object, since \verb`cache_line_size` is an attribute of \verb`System`, although it is not clear how this inheritance occurs.
+	At the interface level alone, the most that could be done to alter granularity of a specific cache is to overwrite \verb`WriteAllocator.block_size` with a new parameter, either passed down through the `Cache` constructor or through the system object as \verb`Parent` the same way that \verb`cache_line_size` is passed. This alteration would be required in conjunction with modification of all relevant C++ class definitions.
 
 	\subsection*{Cache class definition source code}
 
-	... (brief overview of surface-level C++ code)
-	\vspace{2in}
+	The C++ source code for the \verb`Cache` object, found in \verb`gem5/src/mem/cache/cache.cc`, contains definitions for 22 methods, many of which invoke inherited \verb`BaseCache` methods. These methods handle the actual passing of packets in and out of caches, including details of timing, eviction behavior, and snooping.
+
+	The only reference to the system-level line size is where the \verb`Cache` constructor passes it to its parent `BaseCache`, on line 70 with:
+	\begin{verbatim}
+Cache::Cache(const CacheParams &p)
+    : BaseCache(p, p.system->cacheLineSize()),
+      doFastWrites(true)
+	\end{verbatim}
+	This parameter of \verb`BaseCache` is then used to set the attribute \verb`blkSize`. It would thus be simple to overwrite the value of \verb`blkSize` with a cache-specific custom granularity by replacing this use of \verb`p.system->cacheLineSize()` with either a custom system attribute or new constructor parameter.
+
+	The use of block size following this appears well-contained to the scope of the \verb`Cache` class, only being used through the attribute \verb`blkSize`, which is referenced 15 times in \verb`cache.cc`. It is frequently used in conjunction with the \verb`Packet` method `getSize()`, and is only used in the context of packet operations.
+	
+	A cursory inspection of \verb`gem5/src/mem/cache/base.cc`, which contains the definitions for both \verb`BaseCache` and \verb`WriteAllocator`, shows similar usage and no references to the system-level line size via \verb`p.system->cacheLineSize()`. The base cache does have access to \verb`system` and its attributes, but only uses this in the context of handling requestors.
+	
+	From a cursory inspection of the \verb`Packet` source code in \verb`gem5/src/mem/packet.cc`, the \verb`Packet` class appears to be well-contained as well, with no evidence to suggest it would interfere with modification of higher-level objects.
 
 	\subsection*{Complicating factors}
 
-	This approach has a few potential complications: primarily, since Gem5 is not built to accommodate translating memory packets between granularity, setting a different line size between cache layers will result in fatal errors unless packets are transformed between layers. This could potentially be solved with a custom cache bus, but it is unclear whether that would be substantially easier to implement than the custom Curtis block cache.
-
-	Furthermore, this approach only works if the Gem5 source code is sufficiently modular that the modification of line size at the memory level would not interfere with line size at the processor level. Gem5 does have excellent modularity at the configuration level, as far as the ability to mix-and-match system components; however, modification of these components at the source code level is complicated by extensive use of inheritance.
+	There are a few points of complication to attempting to modify Gem5's cache object source code, namely the implementation details of translating packet granularity, and the potential for errors caused by widespread access to system-level attributes.
 	
-	Although inheritance is crucial in enforcing consistency across Gem5's many component classes, it makes it challenging to isolate objects from attributes of the \verb`System` instance; for example, the ability of \verb`WriteAllocator` to access a \verb`System` object as a parent suggests bi-directional awareness of both parent and child object attributes.
+	Since Gem5 is not built to accommodate translating memory packets between granularity, setting a different line size between cache layers will result in fatal errors unless packets are transformed between layers. This could potentially be solved with a custom cache bus, but only if the Gem5 source code is sufficiently modular that the modification of line size at the memory level would not interfere with line size at the processor level.
+	
+	Gem5 does have excellent modularity at the configuration level, as far as the ability to mix-and-match components, but modification of these components' source code in regard to system-level attributes is complicated by the fact that most low-level objects inherit access to system-level attributes. This makes it challenging to isolate objects from attributes of the \verb`System` instance, and makes it unlikely that the line size of an individual cache could be modified without identifying and accounting for all reference to the \verb`System` object's line size at lower levels.
 
-	\begin{figure}[h]
-		\centering
-		\begin{tikzpicture}[node distance = 1.5cm, every node/.style = {rectangle, rounded corners, draw=black, minimum width=4cm, minimum height=0.8cm, text centered}]
-			\node (WriteAllocator) {\verb`WriteAllocator`};
-			\node (BaseCache) [below of=WriteAllocator] {\verb`BaseCache`};
-			\node (Cache) [below of=BaseCache] {\verb`Cache`};
-			\node (System) [below of=Cache] {\verb`System`};
-			\node[draw=none] (upperRight) [right of=BaseCache, xshift=1.4cm] {};
-			\node[draw=none] (lowerRight) [right of=Cache, xshift=1.4cm, yshift=0.68cm] {};
-			\node[draw=none] (upperLeft) [above left of=System, xshift=-1.8cm] {};
-			\node[draw=none] (lowerLeft) [below left of=Cache, xshift=-1.8cm, yshift=-0.2cm] {};
-			\draw[<-, dashed] (WriteAllocator) -- (BaseCache);
-			\draw[<-] (BaseCache) -- (Cache);
-			\draw[<-, dashed] (Cache) -- (System);
-			\draw (WriteAllocator) -| (lowerRight);
-			\draw[->] (upperRight) |- (System);
-			\draw (Cache) -| (lowerLeft);
-			\draw[->] (upperLeft) |- (System);
-		\end{tikzpicture}
-		\caption{Relationships of inheritance (Child {\textrightarrow} Parent) and definition (Caller $\dasharrow$ Instance) between certain Gem5 objects.}
-	\end{figure}
-
-	This indicates that lower-level that modifications made to a child class (eg. \verb`Write`-\verb`Allocator`) could impact the abstracted caller (eg. \verb`System`). Thus, it is unlikely that the line size of an individual cache could be modified without identifying and accounting for shared reference to line size at both higher and lower levels.
+	A cursory search using \verb`grep -r "p.system->cacheLineSize"` in \verb`gem5/src` shows only 11 references to \verb`p.system->cacheLineSize`, so replacing each of these instances could be doable. However, given the likelihood of unforeseen impacts on peripheral components, in practice this would likely be a much more daunting task to implement and troubleshoot.
 
 	\subsection*{Conclusion on granularity-change implementation in Gem5}
 
 	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
 
-	Thus, I will instead present a study of alternative options for cache simulation with a focus on their capacity for mixed granularity cache implementation.
+	I will instead present a study of alternative options for cache simulation with a focus on their capacity for mixed granularity cache implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
