@@ -212,9 +212,6 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 	Since there are a number of parameters of the cache objects that should be adjusted and fine-tuned during testing, I created \verb`options.json` to be read by the file where the cache objects are defined, and used to set cache attributes accordingly.
 
-	[NOTE TO SELF: Elaborate on each such parameter here if I get as far as setting/testing them. N/A if not using this implementation, or maybe still elaborate as additional vocab for background/context? Associativity etc.]
-
-
 	\subsection*{Wrapper script}
 
 	The wrapper file \verb`main.py` runs Gem5 with the config and measures the output written to \verb`stats.txt` at the end of each simulation. It's necessary that statistics be collected using a file outside the config because gem5 doesn't write to `stats.txt` until the simulation has terminated, and doesn't make these available during the running of a simulation.

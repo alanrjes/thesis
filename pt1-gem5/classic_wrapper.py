@@ -33,8 +33,6 @@ def push_files():
     for fname in files:
         # copy to Gem5 configs subdirectory
         shutil.copy(here + local_config + "/" + fname, here + "/gem5/configs" + local_config)
-        # copy to draft subdirectory
-        shutil.copy(here + local_config + "/" + fname, here + "/draft/code" + local_config)
 
 # run gem5 config for some particular cache model
 def run_config(binary, cacheType):
@@ -55,7 +53,7 @@ for cache in ["Item", "Block", "IBLP"]:
     for i in range(trials):
         run_config(options.binary, cache)
         # check gem5/m5out/stats.txt result
-        f = open("/home/alan/Documents/thesis/gem5/m5out/stats.txt")
+        f = open(here + "/gem5/m5out/stats.txt")
         lines = f.readlines()
         if cache == "IBLP":
             # item layer:
