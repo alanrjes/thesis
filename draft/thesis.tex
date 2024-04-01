@@ -48,11 +48,11 @@ breaklines=true
 
 \section{A crash course in computer caching}
 
-Computer memory is the fundamental component of digital systems that serves as a dynamic repository where data and instructions can be temporarily stored for quick access and retrieval during active processes. The drastically lower latency of memory requests compared to retrieval of data from a hard drive or SSD makes memory crucial to the efficient performance of computers.
+Computer memory is the fundamental component of digital systems that serves as a dynamic repository where data and instructions can be temporarily stored for quick access and retrieval during active processes. The much lower latency of memory requests compared to retrieval of data from a hard drive or SSD makes memory crucial to the efficient performance of computers.
 
 	\subsection*{The memory hierarchy}
 
-	A computer's memory is divided into a memory hierarchy, which arranges various types of computer memory in tiers based on side and access speed, with faster but smaller and more expensive layers of memory at the top of the hierarchy. When the processor requests data from memory, each layer of the hierarchy is checked in descending order until the data is located.
+	A computer's various types of storage make up the memory hierarchy; layers of storage are arranged in tiers of the hierarchy based on size and access speed, with faster but smaller and more expensive layers of memory at the top of the hierarchy, and slower, larger storage at the bottom. When the processor requests data from memory, each layer of the hierarchy is checked in descending order until the data is located, so that fewer checks are made to the lower, slower memory than to the higher, faster layers.
 
 	\begin{figure}[h]
     	\centering
@@ -64,56 +64,62 @@ Computer memory is the fundamental component of digital systems that serves as a
 	
 	The purpose of caching is to reduce the number of accesses made to the main memory by storing select pieces of data that are most likely to be requested in the near future. When a piece of requested data is present in a cache, that is called a cache hit; when it is absent, it's a cache miss. Since caches are small and fast, intended to be accessed frequently at minimal cost, an important factor of cache design is how to best utilize the limited space they offer to optimize the hit rate, i.e. the percent of total requests for which the requested data is present in the cache.
 	
-	The algorithms used to optimize hit rate by determining which data to admit to and evict from a cache are called replacement policies, and are designed using properties of data known as spatial and temporal locality.
+	The algorithms used to optimize hit rate by determining which data to admit to and evict from a cache are called replacement policies. Replacement policies are designed using properties of data called spatial and temporal locality.
 
 	\subsection*{Data locality}
 	
-	Temporal locality applies to data that has been used recently, and therefore is often more likely to be needed again than some arbitrary other piece of data. Temporal locality is central to many replacement policies, such as a the Least Recently Used (LRU) policy, which chooses which data to keep in order of which has been accessed most recently and evicts data that has been accessed least recently.
+	Temporal locality applies to data that has been used recently, and therefore is typically more likely to be needed again than some arbitrary other piece of data. Temporal locality is central to many replacement policies, such as a the Least Recently Used (LRU) policy which, upon loading a new piece of data from main memory, chooses data in the cache to evict by which data was least recently requested by the processor.
 	
-	Spatial locality applies to data that is located physically near other useful data in memory. Caches operate on sections of data called lines or blocks\footnote{In general use, ``item'' and ``block'' are interchangeable terms. In this thesis, I will only use ``line size'' to refer to this metric.}, where a cache's line size determines the granularity of the cache: higher granularity for a smaller line size and lower for a larger line size. A cache will load an entire line, usually 32, 64, or 128 bytes, when any piece of data stored within that line in requested. A cache's utilization of spatial locality corresponds to the line size of the cache; a larger line size loads more data which is located near the specific requested item, and thus populates the cache with this peripheral data that is spatially local.
+	Spatial locality applies to data that is located physically near other useful data in memory. Caches operate on sections of data called lines (or blocks), where a cache's line size determines the granularity of the cache: higher granularity for a smaller line size and lower for a larger line size. A cache will load an entire line (usually 32, 64, or 128 bytes) when any piece of data stored within that line in requested. A cache's utilization of spatial locality corresponds to the line size of the cache; a larger line size loads more data which is located near the specific requested item, and thus populates the cache with this peripheral data that is spatially local.
 
-	Due to the fixed amount of space available in a cache, there is generally a tradeoff between utilizing spatial locality versus temporal locality to populate a cache. Typical caches will utilize both forms of locality to some degree, since the methods of selecting for each type of locality are mutually dependent on each other. For example: a cache with high temporal locality may have a very small line size to minimize the amount of spatially local data admitted, but unless the size of all stored data is precisely a multiple of the cache line size, some excess spatially local data in each line will also be stored. Likewise, a cache with the largest possible line size, which stores only one line of data the same size as the entire cache, still requires an access to be made to some piece of data in a line in order to load that line into the cache, and therefore still contains some portion of temporally local data.
+	Due to the fixed amount of space available in a cache, there is a tradeoff between utilizing spatial locality versus temporal locality to populate a cache. Typical caches will utilize both forms of locality to some degree, since the methods of selecting for each type of locality are mutually dependent on each other. For example: a cache with high temporal locality may have a very small line size to minimize the amount of spatially local data admitted, but unless the size of all stored data is precisely a multiple of the cache line size, some excess spatially local data in each line will also be stored. Likewise, a cache with the largest possible line size, which stores only one line of data the same size as the entire cache, still requires an access to be made to some piece of data in a line in order to load that line into the cache, and therefore still contains some portion of temporally local data.
 
 	\subsection*{Further concepts in caching}
 
-	Coherence. Inclusivity/exclusivity. On-CPU data \& instruction caches. Brief overview \& preview of how these do/don't apply to the later parts of this thesis.
+	A variety of other design choices impact cache performance, particularly in more complex multiprocessor systems. Cache coherence refers to methods of keeping data stored in multiple caches consistent with each other. Inclusive caches are caches which contain data also present in lower levels of memory, and which also require cache coherence with lower layers, whereas exclusive caches contain no duplicate data and thus require a method of tracking to prevent duplication.
+	
+	Although these concepts do appear in this thesis, the focus is on data locality, and thus a through understanding of further design factors is not necessary.
 
-%	\subsection*{Caches in realistic systems}
-
-%	Although measures of performance such as upper and lower bounds and competitive ratios can be proven for cache models using theoretical analysis and can give a general idea of how a cache model should perform, realistic estimations of cache performance in complex systems require testing to measure outcomes. The introduction of multiprocessing requires cache coherence protocols to maintain consistency across shared memory resources, and multiprocessing adds variable of uncertainty into cache performance, since the structure of a specific processor's cache hierarchy or a particular program's implementation of parallelism can complicate cache behavior.
 
 \section{The granularity-change caching problem}
 
-According the 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change (GC) Caching Problem \cite{beckmann}.
+According the 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality  \cite{beckmann}. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change (GC) Caching Problem.
 
-The GC Caching Problem describes a cache configuration with two layers of granularity at which data can be accessed, referred to as ``item granularity'' and ``block granularity'', with an ``item'' begin equivalent to a cache line and a ``block'' being equivalent to a group of multiple cache lines, operating as a larger-granularity cache line\footnote{The use of the term ``block'' in the context of the GC Caching Problem is separate from the common use of ``block'' to refer to line size, as mentioned prior. In this thesis, ``block'' will always refer to the GC-caching meaning, with the exception of a few cases of variable names quoted from preexisting code referring to the common meaning.}. Crucially, a granularity-change cache is designed ``such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}. This allows a single cache to take advantage of both the higher temporal locality provided by the item line size and the higher spatial locality provided by the block line size, thereby creating an opportunity to study the tradeoffs between different uses of granularity. For the purpose of implementation, Beckmann et. al. describes the deterministic replacement policy ``Item-Block Layer Partitioning''.
+The GC Caching Problem describes a cache configuration with two layers of granularity at which data can be accessed, referred to as ``item granularity'' and ``block\footnote{The use of the term ``block'' in the context of the GC Caching Problem is separate from the common use of ``block'' as a synonym for ``line'', as mentioned prior. In this thesis, ``block'' will always refer to the GC-caching meaning, with the exception of a few cases of variable names quoted from preexisting code referring to the common meaning.} granularity'', with an item begin equivalent to a cache line and a block being equivalent to a group of multiple cache lines that are treated as as a single larger-granularity line, ``such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}.
+
+In regard to sub-sectioning blocks, the theoretical analysis in Beckmann et. al. finds that ``to achieve the best competitive ratio\footnote{A competitive ratio is a measurement used in theoretical analysis of cache replacement policies that compares a cache's actual eviction choices with the optimal choices.}, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}. Thus, in this thesis I will be focusing specifically on the subproblem that only involves loading entire blocks and individual items.
+
+Beckmann et. al. describes a simple, deterministic replacement policy for this subproblem called Item-Block Layer Partitioning (IBLP).
 
 	\subsection*{Item-Block Layered Partitioning}
 
-	Item-Block Layered Partitioning (IBLP) divides a cache into two virtual segments, one of item granularity and the other of block granularity.
+	IBLP divides a cache into two virtual segments, one of item granularity and the other of block granularity, with minimal latency between them. Beckmann et. al. describes the behavior of IBLP as: \begin{quote}
+		The first layer, which serves each access to the cache, loads only the items that are accessed and evicts using the Least-Recently Used (LRU) replacement policy. The second layer, which only serves accesses that miss in the first layer, also uses the LRU policy for evictions, but loads and evicts at the granularity of entire blocks at a time. \cite{beckmann}
+	\end{quote}
 
 	\begin{figure}[h]
 		\centering
 		\includegraphics[width=2.5in]{figures/IBLP.png}
 		\caption{A diagram of a cache running IBLP \cite{beckmann}.}
 	\end{figure}
-	
-	Beckmann et. al. describes the behavior of IBLP as: \begin{quote}
-		The first layer, which serves each access to the cache, loads only the items that are accessed and evicts using the Least-Recently Used (LRU) replacement policy. The second layer, which only serves accesses that miss in the first layer, also uses the LRU policy for evictions, but loads and evicts at the granularity of entire blocks at a time. \cite{beckmann}
-	\end{quote}
- 
-	IBLP models a subset of the granularity-change caching problem for which data is only loaded at the item or block granularity, and never as a subset of a block. This is sufficient for testing the viability of granularity-cache caching, since Beckmann et. al. finds that ``to achieve the best competitive ratio, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}.
-	
-	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis. This makes relative layer sizes a useful variable for furthering understanding of granularity-change caching.
 
+	This policy provides benefits of both spatial and temporal locality while reducing the tradeoff between the two. By using a separate LRU orderings for each layer, IBLP prevents temporally local data in the item layer from evicting spatially local block layer data.
+	
+	The block layer is neither inclusive nor exclusive of the item layer, so duplicate items may appear; this simplifies the cache's design by preventing need for coherence or exclusivity tracking. Duplicate data crowding the cache is not expected to have a major performance impact in general cases, since it would only occur if a significant amount of spatially local data was also temporally local, which would overall benefit the hit rate and thus counteract the negative impact caused by loss of cache space.
+	
+	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis.
 
 \section{Prior work simulating GC caching}
 
 In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Caching Problem'', by Maxx Curtis, follows-up the theoretical work of Beckmann et. al. on the granularity-change caching problem by providing a foray into practical simulation of the proposed cache model. Curtis provides a survey of two systems simulators, Zsim and Gem5, and a presents a custom implementation of a block Cache in Gem5 \cite{curtis}.
 
+	\subsection*{About the simulators}
+
+	...
+
 	\subsection*{Block cache implementation}
 
-	The block cache implemented by Curtis is built from the ground up as a new object, and thus is limited in what features of a Gem5 system it can be configured with. It operates on the level of handling packet streams between the CPU/caches, and facilitates the switch between item and block granularity at this level. 
+	The block cache implemented by Curtis is built from the ground up as a new object, and thus is limited in what features of a Gem5 system it can be configured with. It operates on the level of handling packet streams between the CPU/caches, and facilitates the switch between item and block granularity at this level.
 
 	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one of the priorities of my work here is to provide an implementation that allows for use in more realistic system configurations.
 
@@ -325,18 +331,22 @@ Cache::Cache(const CacheParams &p)
 
 	A cursory search using \verb`grep -r "p.system->cacheLineSize"` in \verb`gem5/src` shows only 11 references to \verb`p.system->cacheLineSize`, so replacing each of these instances could be doable. However, given the likelihood of unforeseen impacts on peripheral components, in practice this would likely be a much more daunting task to implement and troubleshoot.
 
-	\subsection*{Conclusion on granularity-change implementation in Gem5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Conclusion}
+
+\section{Results of the attempt at a Gem5 simulation}
+
+	...
+
+	\subsection*{The classic cache}
+
+	\subsection*{The Ruby cache}
+
+	\subsection*{Source code and system-scope granularity}
 
 	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
 
 	I will instead present a study of alternative options for cache simulation with a focus on their capacity for mixed granularity cache implementation.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Conclusion}
-
-\section{Results}
-
-...
 
 \section{Future work}
 
