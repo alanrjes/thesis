@@ -8,6 +8,7 @@
 \usepackage[hyphens]{url}
 \usepackage{rotating}
 \usepackage{listings}
+\usepackage{float}
 \usepackage{fancyvrb}
 \usepackage{tikz}
 \usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
@@ -94,7 +95,7 @@ Beckmann et. al. describes a simple, deterministic replacement policy for this s
 	\subsection*{Item-Block Layered Partitioning}
 
 	IBLP divides a cache into two virtual segments, one of item granularity and the other of block granularity, with minimal latency between them. Beckmann et. al. describes the behavior of IBLP as: \begin{quote}
-		The first layer, which serves each access to the cache, loads only the items that are accessed and evicts using the Least-Recently Used (LRU) replacement policy. The second layer, which only serves accesses that miss in the first layer, also uses the LRU policy for evictions, but loads and evicts at the granularity of entire blocks at a time. \cite{beckmann}
+		The first layer, which serves each access to the cache, loads only the items that are accessed and evicts using the Least-Recently Used (LRU) replacement policy. The second layer, which only serves accesses that miss in the first layer, also uses the LRU policy for evictions, but loads and evicts at the granularity of entire blocks at a time \cite{beckmann}.
 	\end{quote}
 
 	\begin{figure}[h]
@@ -115,7 +116,9 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	\subsection*{About the simulators}
 
-	...
+	Zsim is a ``fast and accurate microarchitectural simulation'' presented in 2013 \cite{zsim}. Although it showed promise as a tool for simulating GC-caching, Curtis finds that a heavy reliance on outsize libraries and lack of continuous support made it difficult and time-consuming to configure.
+
+	Gem5 is an open-source computer systems simulation project with an active development community and emphasis on wide selection of modular system components such as CPU models. It contains two different detailed memory simulation subsystems. The Curtis thesis selects the classic memory subsystem of Gem5 to implement a ``granularity-aware'' block cache for use in IBLP simulation \cite{curtis}.
 
 	\subsection*{Block cache implementation}
 
@@ -135,38 +138,44 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 		\caption{The three cache configurations tested by Curtis \cite{curtis}.}
 	\end{figure}
 
+	All testing uses an x86 system with Gem5's ``Simple Timing CPU''. Each memory system simulates a 64B line size and 4kiB memory page\footnote{A memory ``page'' is a section of memory, similar to a cache line but typically larger.} size, 8GiB of DDR3 for main memory, and a cache size of 512KiB. In IBLP caches, the 512KiB area is divided evenly between the item and block layers \cite{curtis}.
+
 	Both merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache \cite{curtis}. Since this does not line up with the expectation of poor performance of the item cache for high spatial locality and poor performance of the block cache for high temporal locality, the results of these tests are inconclusive.
 
-	\begin{figure}[h]
+	\begin{figure}[H]
 		\centering
-		\includegraphics[width=4.8in]{figures/curtis_cache_hit_rates.png}
+		\includegraphics[height=2.4in]{figures/curtis_cache_hit_rates.png}
 		\caption{Hit rates resulting from tests of the three cache configurations \cite{curtis}.}
 	\end{figure}
 
 	Furthermore, looking specifically at the hit rates of the individual layers of the IBLP cache, the three test scripts do not support the expectation of a positive corelation between high spatial locality and high relative utilization of the block layer.
 
-	\begin{figure}[h]
+	\begin{figure}[H]
 		\centering
-		\includegraphics[width=4.5in]{figures/curtis_layer_hit_rates.png}
+		\includegraphics[height=2.4in]{figures/curtis_layer_hit_rates.png}
 		\caption{Hit rates for the item and block layers of the IBLP cache \cite{curtis}.}
 	\end{figure}
 
 	Curtis suggests that these inconclusive results are due in part to the low granularity of the block layer in the IBLP cache, and insufficient memory workload of the test scripts compared to the caches' sizes. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
 
-	\subsection*{Suggestions for future work}
-
-	In conclusion, Curtis states: \begin{quote}
-		At this stage of development, I recommend against using my implementation for further research into IBLP. ... If one only wanted to examine the viability of IBLP itself, then it would be fairly easy to use typical Cache objects to do so... by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency. \cite{curtis}
-	\end{quote}
-
-	Additionally, Curtis suggests working towards an implementation of a granularity-change cache model that is compatible with more realistic processors than Gem5's simple CPU models. Since Gem5 has a wide variety of available CPU models, this is a matter of compatibility with the full array of cache features in Gem5, including response queues and cache coherence.
-
 
 \chapter{Introduction}
 
-\section{Approach}
+\section{...}
 
-With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem is to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation should be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
+	\subsection*{Curtis suggestions}
+
+	In describing suggestions for future work, Curtis states: \begin{quote}
+		At this stage of development, I recommend against using my implementation for further research into IBLP. ... If one only wanted to examine the viability of IBLP itself, then it would be fairly easy to use typical Cache objects to do so... by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency \cite{curtis}.
+	\end{quote}
+
+	Furthermore, the repository linked as containing the code used in the Curtis thesis does not contain any of said code, so expanding on the block cache implementation is not an option.
+
+	Curtis also suggests working towards an implementation of a granularity-change cache model that is compatible with more realistic processors than Gem5's simple CPU models. Since Gem5 has a wide variety of available CPU models, this is a matter of compatibility with the full array of cache features in Gem5, including response queues and cache coherence.
+
+	\subsection*{My Approach}
+
+	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem is to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation should be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -174,8 +183,8 @@ With the results and suggestions of the Curtis thesis in mind, my approach to fu
 
 \section{Overview of Gem5}
 
-Gem5 is an open-source, community-led computer computer systems simulation project that describes itself as: \begin{quote}
-	...a modular platform for computer-system architecture research, encompassing system-level architecture as well as processor microarchitecture. \cite{gem5-about}
+Gem5 is an open-source, community-led computer systems simulation project that describes itself as: \begin{quote}
+	...a modular platform for computer-system architecture research, encompassing system-level architecture as well as processor microarchitecture \cite{gem5-about}.
 \end{quote}
 
 Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}.
