@@ -4,15 +4,19 @@
 \usepackage{graphicx,latexsym}
 \usepackage{amssymb,amsthm,amsmath}
 \usepackage{longtable,booktabs,setspace}
-\usepackage{fancyvrb}
 \usepackage[hyphens]{url}
 \usepackage{rotating}
 \usepackage{listings}
 \usepackage{float}
 \usepackage{fancyvrb}
+\usepackage{hyperref}
+\usepackage{xcolor}
 \usepackage{tikz}
 \usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
 \addbibresource{thesis.bib}
+
+\newcommand{\revise}[1]{{\color{red}#1}}
+\newcommand{\vstep}{\vspace{5mm}}
 
 \lstset{	% for source code formatting
 basicstyle=\small\ttfamily,
@@ -110,6 +114,10 @@ Beckmann et. al. describes a simple, deterministic replacement policy for this s
 	
 	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis.
 
+	\subsection*{Related caching problems}
+
+	\revise{(...Cite related but different studies, explain why they're different, cite the lack of other specific GC-cache research).}
+
 \section{Prior work simulating GC caching}
 
 In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Caching Problem'', by Maxx Curtis, follows-up the theoretical work of Beckmann et. al. on the granularity-change caching problem by providing a foray into practical simulation of the proposed cache model. Curtis provides a survey of two systems simulators, Zsim and Gem5, and a presents a custom implementation of a block Cache in Gem5 \cite{curtis}.
@@ -120,15 +128,15 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	Gem5 is an open-source computer systems simulation project with an active development community and emphasis on wide selection of modular system components such as CPU models. It contains two different detailed memory simulation subsystems. The Curtis thesis selects the classic memory subsystem of Gem5 to implement a ``granularity-aware'' block cache for use in IBLP simulation \cite{curtis}.
 
-	\subsection*{Block cache implementation}
+	\subsection*{Implementation}
 
 	The block cache implemented by Curtis is built from the ground up as a new object, and thus is limited in what features of a Gem5 system it can be configured with. It operates on the level of handling packet streams between the CPU/caches, and facilitates the switch between item and block granularity at this level.
 
 	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one of the priorities of my work here is to provide an implementation that allows for use in more realistic system configurations.
 
-	Unfortunately the code from the Curtis thesis was unavailable, so continuing to build on this implementation of the block cache was not a possibility.
+	\revise{(...revise above paragraphs to be more background-y and less intro-y, and add better explanation of Gem5 CPU models and why they're not super useful and what would be required to make them useful.)}
 
-	\subsection*{Results of Curtis}
+	\subsection*{Tests}
 
 	Curtis tests three cache configurations against each other: a simple one-level cache of item granularity, a simple one-level cache using the custom block cache, and an IBLP cache constructed using a standard cache of item granularity in conjunction with a block cache. Three benchmarks are used: iterative merge sort (high in spatial locality), randomized subset-sum (high in temporal locality), and recursive merge sort (a combination of both forms of locality).
 	
@@ -140,31 +148,47 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	All testing uses an x86 system with Gem5's ``Simple Timing CPU''. Each memory system simulates a 64B line size and 4kiB memory page\footnote{A memory ``page'' is a section of memory, similar to a cache line but typically larger.} size, 8GiB of DDR3 for main memory, and a cache size of 512KiB. In IBLP caches, the 512KiB area is divided evenly between the item and block layers \cite{curtis}.
 
-	Both merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache \cite{curtis}. Since this does not line up with the expectation of poor performance of the item cache for high spatial locality and poor performance of the block cache for high temporal locality, the results of these tests are inconclusive.
+	Each test script is given as input a file with 1 million randomly generated 8-byte values, and gives as output a randomly selected subset of the sorted result to prevent the writing of a large sequential output from skewing the data toward spatial locality \cite{curtis}.
 
-	\begin{figure}[H]
-		\centering
-		\includegraphics[height=2.4in]{figures/curtis_cache_hit_rates.png}
-		\caption{Hit rates resulting from tests of the three cache configurations \cite{curtis}.}
-	\end{figure}
+	\subsection*{Results}
+
+	Both merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache \cite{curtis}. Since this does not line up with the expectation of poor performance of the item cache for high spatial locality and poor performance of the block cache for high temporal locality, the results of these tests are inconclusive.
 
 	Furthermore, looking specifically at the hit rates of the individual layers of the IBLP cache, the three test scripts do not support the expectation of a positive corelation between high spatial locality and high relative utilization of the block layer.
 
-	\begin{figure}[H]
+	Curtis suggests that these inconclusive results are due in part to the low granularity of the block layer in the IBLP cache, and insufficient memory workload of the test scripts compared to the caches' sizes. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
+
+	\newpage
+	\null
+	\vfill
+
+	\begin{figure}[h]
 		\centering
-		\includegraphics[height=2.4in]{figures/curtis_layer_hit_rates.png}
+		\includegraphics[height=2.8in]{figures/curtis_cache_hit_rates.png}
+		\caption{Hit rates resulting from tests of the three cache configurations \cite{curtis}.}
+	\end{figure}
+
+	\vfill
+
+	\begin{figure}[h]
+		\centering
+		\includegraphics[height=2.8in]{figures/curtis_layer_hit_rates.png}
 		\caption{Hit rates for the item and block layers of the IBLP cache \cite{curtis}.}
 	\end{figure}
 
-	Curtis suggests that these inconclusive results are due in part to the low granularity of the block layer in the IBLP cache, and insufficient memory workload of the test scripts compared to the caches' sizes. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
-
+	\vfill
 
 \chapter{Introduction}
 
-\section{...}
+\section{Significance}
 
-	\subsection*{Curtis suggestions}
+Providing a simulation of a Granularity-Change cache would benefit the field of computer caching research by providing the tools to gain greater insight into the impacts and uses of spacial locality. Analysis using such a simulation could help determine the viability of granularity-change caches for implementation in real computer systems.
 
+The Curtis thesis provides a foundation for studying GC-cache simulation, and a jumping off point for further research into GC-cache implementation in Gem5. The inconclusive results of Curtis indicate that this is an area where further study would be beneficial. Therefore, for this thesis I expanded on the prior work done by Curtis in an endeavor to use Gem5 to provide conclusive results pertaining the viability of the IBLP cache model.
+
+\section{Approach}
+
+	% curtis findings
 	In describing suggestions for future work, Curtis states: \begin{quote}
 		At this stage of development, I recommend against using my implementation for further research into IBLP. ... If one only wanted to examine the viability of IBLP itself, then it would be fairly easy to use typical Cache objects to do so... by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency \cite{curtis}.
 	\end{quote}
@@ -173,9 +197,14 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	Curtis also suggests working towards an implementation of a granularity-change cache model that is compatible with more realistic processors than Gem5's simple CPU models. Since Gem5 has a wide variety of available CPU models, this is a matter of compatibility with the full array of cache features in Gem5, including response queues and cache coherence.
 
-	\subsection*{My Approach}
+	% approach
+	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem was to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation would be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
 
-	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem is to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation should be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
+\section{Results}
+
+Over multiple different attempted methods of implementing IBLP in Gem5, I uncovered evidence against the viability of each method of implementation. My attempt to implement a nestled cache structure using Gem5's modular classic cache objects revealed the dependence of cache line size on a system-level variable, and thus the impossibility of independently changing the cache line size within one of Gem5's typical caches. My look at a simple cache implementation in Gem5's Ruby memory subsystem revealed similar findings due to the similar dependence on a system object. Finally, my preliminary analysis of Gem5's source code for the classic cache objects provided mixed results that suggest the uncertain possibility but likely difficulty of modifying the Gem5 source code to support granularity change between caches.
+
+Overall, this provides strong evidence against the viability of Gem5 as a tool for simulating the GC-caching problem. Between the findings of the Curtis thesis on the impracticality of a ground-up implementation of new CG-cache objects, and my findings on the complications to using existing Gem5 objects to imitate a granularity change, this exhausts the most direct approaches to implementing GC-caching in Gem5.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -243,7 +272,7 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 	The wrapper takes the three arguments to customize trials: the path to the binary of the script to simulate, the cache models to be tested (out of Block, Item, and IBLP), and the number of trials to run of each cache type.
 
-\section{Granularity limitations}
+	\subsection*{Granularity limitations}
 
 	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, such as through a cache object attribute, to specify the line size for any given layer of memory.
 
@@ -340,6 +369,10 @@ Cache::Cache(const CacheParams &p)
 
 	A cursory search using \verb`grep -r "p.system->cacheLineSize"` in \verb`gem5/src` shows only 11 references to \verb`p.system->cacheLineSize`, so replacing each of these instances could be doable. However, given the likelihood of unforeseen impacts on peripheral components, in practice this would likely be a much more daunting task to implement and troubleshoot.
 
+	\subsection*{Compilation time}
+
+	Furthermore, my attempts at modifying granularity definition in the Gem5 source code were limited by an unusually long compilation time. According to the Gem5 documentation, it is normal for compilation to take longer than 15 minutes \cite{gem5-build}, and my system consistently took 20 minutes or more prior to even terminating with compilation errors; longer for full compilation. System configurations such as the classic and ruby cache configurations are implemented in python and then run by the simulator, and thus the simulator itself only needs to be compiled once, regardless of how often the configuration scripts are changed, so the long build time is not typically an issue. However, since modifying and testing changes to the source code itself requires Gem5 to be recompiled each time modifications are made before those changes can be tested, a long build time makes the process of modifying Gem5's source code significantly more tedious---especially for such large changes that would require extensive debugging.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion}
 
@@ -355,32 +388,46 @@ Cache::Cache(const CacheParams &p)
 
 	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
 
-	I will instead present a study of alternative options for cache simulation with a focus on their capacity for mixed granularity cache implementation.
+	\revise{expand...}
 
 \section{Future work}
 
-...
+If one were to continue to pursue use of Gem5 for GC-caching research, my recommendation would be an approach between mine and that of Curtis, which would involve modification of the Gem5 source code to remove the cache line size from the system scope. This would require in-depth analysis of the Gem5 codebase, a glimpse of which is given in section 3.5, as well as C++ implementation for conversion of packets between granularities as Curtis did for part of the block cache. Given the scope of these changes, this would likely be a major project that would require familiarity with compiling, debugging, and testing a large open-source project.
+
+If one wanted to more generally further the study of GC-caching through simulation, my suggestion would be a survey of other memory system simulation tools.
+
+\revise{(Characteristics to look for specifically, preview \& cite some)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
 
-\chapter{Source code and documentation}
+\chapter{Source code}
 
-\section{Simulation config}
+\section{Classic config}
 
 \subsection*{Caches}
-%\lstinputlisting{code/msi_caches.py}
-\;\\
+\lstinputlisting{code/caches.py}
+\vstep
 
-\subsection*{Runfile (Config)}
-%\lstinputlisting{code/simple_ruby.py}
-\;\\
+\subsection*{Config}
+\lstinputlisting{code/config.py}
+\vstep
 
-\section{Test scripts}
+\subsection*{System}
+\lstinputlisting{code/system.py}
+\vstep
 
-...
+\subsection*{Wrapper}
+\lstinputlisting{code/classic_wrapper.py}
+\vstep
 
-\backmatter % backmatter makes the index and bibliography appear properly in the t.o.c...
+\section{Ruby config}
+
+Files were not modified significantly from those provided at \url{https://github.com/gem5/gem5/tree/ee6f1377d7c54422137dfa47cd4d73407814867d/configs/learning_gem5/part3}.
+
+\section{Gem5 object source code}
+
+Full source code for the Gem5 project can be found at \url{https://github.com/gem5/gem5/}. The version referenced for this thesis is 23.1.0.0.
 
 \nocite{*}
 \addcontentsline{toc}{chapter}{References}
