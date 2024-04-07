@@ -114,10 +114,6 @@ Beckmann et. al. describes a simple, deterministic replacement policy for this s
 	
 	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis.
 
-	\subsection*{Related caching problems}
-
-	\revise{(...Cite related but different studies, explain why they're different, cite the lack of other specific GC-cache research).}
-
 \section{Prior work simulating GC caching}
 
 In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Caching Problem'', by Maxx Curtis, follows-up the theoretical work of Beckmann et. al. on the granularity-change caching problem by providing a foray into practical simulation of the proposed cache model. Curtis provides a survey of two systems simulators, Zsim and Gem5, and a presents a custom implementation of a block Cache in Gem5 \cite{curtis}.
@@ -132,13 +128,13 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	The block cache implemented by Curtis is built from the ground up as a new object, and thus is limited in what features of a Gem5 system it can be configured with. It operates on the level of handling packet streams between the CPU/caches, and facilitates the switch between item and block granularity at this level.
 
-	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one of the priorities of my work here is to provide an implementation that allows for use in more realistic system configurations.
+	\subsection*{Limitations}
 
-	\revise{(...revise above paragraphs to be more background-y and less intro-y, and add better explanation of Gem5 CPU models and why they're not super useful and what would be required to make them useful.)}
+	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one suggested area for further research is in creating an implementation of a GC-cache that allows for use in more realistic system configurations, such as with Gem5's other more realistic processor models.
 
 	\subsection*{Tests}
 
-	Curtis tests three cache configurations against each other: a simple one-level cache of item granularity, a simple one-level cache using the custom block cache, and an IBLP cache constructed using a standard cache of item granularity in conjunction with a block cache. Three benchmarks are used: iterative merge sort (high in spatial locality), randomized subset-sum (high in temporal locality), and recursive merge sort (a combination of both forms of locality).
+	Curtis tests three cache configurations against each other: a simple one-level cache of item granularity, a simple one-level cache using the custom block cache, and an IBLP cache constructed using a standard cache of item granularity in conjunction with a block cache.
 	
 	\begin{figure}[h]
 		\centering
@@ -146,6 +142,8 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 		\caption{The three cache configurations tested by Curtis \cite{curtis}.}
 	\end{figure}
 
+	Three benchmarks are used: iterative merge sort (high in spatial locality), randomized subset-sum (high in temporal locality), and recursive merge sort (a combination of both forms of locality).
+	
 	All testing uses an x86 system with Gem5's ``Simple Timing CPU''. Each memory system simulates a 64B line size and 4kiB memory page\footnote{A memory ``page'' is a section of memory, similar to a cache line but typically larger.} size, 8GiB of DDR3 for main memory, and a cache size of 512KiB. In IBLP caches, the 512KiB area is divided evenly between the item and block layers \cite{curtis}.
 
 	Each test script is given as input a file with 1 million randomly generated 8-byte values, and gives as output a randomly selected subset of the sorted result to prevent the writing of a large sequential output from skewing the data toward spatial locality \cite{curtis}.
@@ -180,13 +178,13 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 \chapter{Introduction}
 
-\section{Significance}
+\section{Significance of this research}
 
 Providing a simulation of a Granularity-Change cache would benefit the field of computer caching research by providing the tools to gain greater insight into the impacts and uses of spacial locality. Analysis using such a simulation could help determine the viability of granularity-change caches for implementation in real computer systems.
 
 The Curtis thesis provides a foundation for studying GC-cache simulation, and a jumping off point for further research into GC-cache implementation in Gem5. The inconclusive results of Curtis indicate that this is an area where further study would be beneficial. Therefore, for this thesis I expanded on the prior work done by Curtis in an endeavor to use Gem5 to provide conclusive results pertaining the viability of the IBLP cache model.
 
-\section{Approach}
+\section{My approach}
 
 	% curtis findings
 	In describing suggestions for future work, Curtis states: \begin{quote}
@@ -200,15 +198,15 @@ The Curtis thesis provides a foundation for studying GC-cache simulation, and a 
 	% approach
 	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem was to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation would be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
 
-\section{Results}
+\section{My results}
 
 Over multiple different attempted methods of implementing IBLP in Gem5, I uncovered evidence against the viability of each method of implementation. My attempt to implement a nestled cache structure using Gem5's modular classic cache objects revealed the dependence of cache line size on a system-level variable, and thus the impossibility of independently changing the cache line size within one of Gem5's typical caches. My look at a simple cache implementation in Gem5's Ruby memory subsystem revealed similar findings due to the similar dependence on a system object. Finally, my preliminary analysis of Gem5's source code for the classic cache objects provided mixed results that suggest the uncertain possibility but likely difficulty of modifying the Gem5 source code to support granularity change between caches.
 
-Overall, this provides strong evidence against the viability of Gem5 as a tool for simulating the GC-caching problem. Between the findings of the Curtis thesis on the impracticality of a ground-up implementation of new CG-cache objects, and my findings on the complications to using existing Gem5 objects to imitate a granularity change, this exhausts the most direct approaches to implementing GC-caching in Gem5.
+Overall, this provides strong evidence against the use of Gem5 to simulating the GC-caching problem. Between the findings of the Curtis thesis on the impracticality of a ground-up implementation of new CG-cache objects, and my findings on the complications to using existing Gem5 objects to imitate a granularity change, this exhausts the most direct approaches to implementing GC-caching in Gem5.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Attempting a modular IBLP implementation in Gem5}
+\chapter{Attempting a modular IBLP implementation}
 
 \section{Overview of Gem5}
 
@@ -216,21 +214,35 @@ Gem5 is an open-source, community-led computer systems simulation project that d
 	...a modular platform for computer-system architecture research, encompassing system-level architecture as well as processor microarchitecture \cite{gem5-about}.
 \end{quote}
 
-Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}.
+Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}. It has an active development community and substantial documentation and resources, including a tutorial and extensive documentation on the gem5 website, automatically-generated API documentation, and a full introductory course based on curriculum from CS 752 and CS 757 at the University of Wisconsin-Madison \cite{gem5-docs}.
+
+I chose to use Gem5 to simulate a granularity-change cache due to the foundation and specific suggestions for future work provided by Curtis; in particular, the recommendation to use cache objects to examine the viability of IBLP \cite{curtis}.
 
 	\subsection*{Caching subsystems}
 
 	Due to its origins as a combination of m5 and GEMS, Gem5 contains two separate subsystems that can both be used to model caches. The classic cache model from m5 provides simple, modular functionality for multi-level caches, but with an inflexible MOESI cache coherence protocol. The Ruby cache model has more complex implementation details, with the ability to test customized cache coherence protocols.
 
-\section{Initial classic cache implementation}
+	Classic caches are the much simpler model to implement, as they only require object definitions in the Python config script \cite{gem5-tutorial}. On the other hand, Ruby caches require special files written in SLICC (Specification Language including Cache Coherence) to define coherence protocols \cite{gem5-ruby}. Furthermore, since Ruby's focus on cache coherence translates to a focus on multiprocessor systems running multithreaded programs, other components of a Ruby configuration are more complicated to include these additional features.
 
-	I began by implementing a nestled cache structure using classic Gem5 caches. This involved first building a simple cache configuration following the Gem5 documentation's ``Getting Started'' tutorial, then modifying the cache bus configuration to support a nestled block layer and writing a wrapper program to perform trials and collect data from the simulation.
+	Since the IBLP does not require specialized customization of cache coherence protocols and simulating IBLP with multithreading was not my focus, I opted to use the classic cache subsystem for my initial implementation.
 
-	\subsection*{Config files}
+	\subsection*{System configs}
 
-	A Gem5 configuration is defined by a python file in the ``configs'' directory. To run a config, the path to this file is given to the appropriate build command for the config's architecture, along with any arguments such as the path of the script to simulate.
-	
-	Contained within a config file are the commands to create a system object, set up a system, and start a simulation.
+	A configuration of a system in Gem5 is defined by a Python file in the ``configs'' directory, which imports various Gem5 components for the processor, clock, memory, busses, and all other parts of the system. The code in the config file establishes the relationships between these components and prompts the start of the simulation.
+
+	Since a system to simulate is defined and run through such a config file, I will frequently refer to the primary Python implementation of a system as its config.
+
+	To run a config, the path to this file is given to the appropriate build command for the config's architecture, along with any arguments such as the path of the script to simulate; for example, running \verb`build/X86/gem5.opt configs/my_config.py` simulates the system defined in \verb`my_config.py` using the compilation of Gem5 for an X86 system with \verb`.opt` indicating both optimizations and debug messages are enabled.
+
+	\subsection*{Measuring statistics}
+
+	Since Gem5 is intended for systems research, it provides a thorough report of statistics from a simulation written to \verb`gem5/m5out/stats.txt` at the termination of the simulation. This includes statistics for every object that is a member of the System object.
+
+	For the purpose of analyzing a GC-cache simulation, \verb`stats.txt` provides hit and miss rate statistics for all caches in the system.
+
+\section{Classic cache implementation}
+
+	I began by implementing a nestled cache structure using classic Gem5 caches. This involved first building a simple cache configuration following the Gem5 documentation's ``Getting Started'' tutorial, then modifying the cache bus configuration to support a nestled block layer and writing a wrapper program to perform trials and collect data from the simulation (see Appendix A for code).
 
 	\subsection*{System class}
 
@@ -268,24 +280,26 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 
 	\subsection*{Wrapper script}
 
-	The wrapper file \verb`main.py` runs Gem5 with the config and measures the output written to \verb`stats.txt` at the end of each simulation. It's necessary that statistics be collected using a file outside the config because gem5 doesn't write to `stats.txt` until the simulation has terminated, and doesn't make these available during the running of a simulation.
+	The wrapper file \verb`main.py` runs Gem5 with the config and collects the relevant statistics from \verb`stats.txt` at the end of each simulation.
 
 	The wrapper takes the three arguments to customize trials: the path to the binary of the script to simulate, the cache models to be tested (out of Block, Item, and IBLP), and the number of trials to run of each cache type.
 
-	\subsection*{Granularity limitations}
+\section{System-scope granularity limitation}
 
 	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, such as through a cache object attribute, to specify the line size for any given layer of memory.
 
 	Instead, Gem5 sets an attribute for line size at the level of the \verb`System` class. This prevents any possibly implementation of granularity-change caches in classic caches without modification of Gem5's \verb`System` and \verb`Cache` classes to allow specification of a larger line size for memory.
 
 
-\section{Considering Ruby for granularity change}
+\chapter{Exploring granularity workarounds in Gem5}
 
-	Since my initial classic cache implementation failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache system to see if the more detailed cache model includes a way of overriding the system-wide line size requirement.
+\section{The Ruby memory subsystem}
+
+	Since my initial classic cache implementation failed to meet the requirements for simulating an IBLP cache, I turned to the Ruby cache system to see if its more detailed cache model included a way of overriding the system-wide line size requirement.
 
 	\subsection*{Overview of Ruby}
 
-	Ruby provides a detailed system for simulating memory systems with a wide array of configurations, including ``inclusive/exclusive cache hierarchies with various replacement policies, coherence protocol implementations, interconnection networks, DMA and memory controllers'', and more \cite{gem5-ruby}.
+	Ruby provides a detailed system for simulating a wide array of memory configurations, including ``inclusive/exclusive cache hierarchies with various replacement policies, coherence protocol implementations, interconnection networks, DMA and memory controllers'', and more \cite{gem5-ruby}.
 
 	\begin{figure}[h]
 		\centering
@@ -293,7 +307,7 @@ Gem5 began as two separate projects, m5 at the University of Michigan and GEMS a
 		\caption{A graphic from GEMS visualizing Ruby's components \cite{gem5-ruby}.}
 	\end{figure}
 
-	For my purpose, a simple but realistic memory system is sufficient to model IBLP, so most of the features of a Ruby cache system are unnecessary. However, implementation of a granularity-change-capable cache in Ruby would provide countless options for future research studying the intersection of granularity-change in caches with other complicating variables.
+	Ruby's emphasis on highly configurable memory means it is mostly used specifically for research on cache coherence or otherwise complex interconnected memory systems. For my purpose, a simple but realistic memory system is sufficient to model IBLP, so most of the features of a Ruby cache system are unnecessary. However, implementation of a granularity-change-capable cache in Ruby would provide countless options for future research studying the intersection of granularity-change in caches with other complicating variables.
 
 	\subsection*{Cache coherence specification}
 
@@ -324,13 +338,13 @@ self.cacheMemory = RubyCache(
 
 	Furthermore, the complexity of the Ruby subsystem is such that it would not be advisable to implement IBLP in Ruby unless specifically for the purpose of studying granularity-change caching in conjunction with features specific to Ruby, such as cache coherence.
 
-\section{A closer look at system-scope granularity}
+\section{Granularity scope in the source code}
 
 	The final possibility of implementing IBLP using existing Gem5 cache objects would be if relatively small modifications could be made to the Gem5 source code to change the granularity parameter, where it receives the system-assigned line size, to instead use a custom line size value.
 
 	\subsection*{Cache interface source code}
 
-	I began by inspecting the Python interface for the classic cache base object, defined in \verb`gem5/src/mem/cache/Cache.py`. This file contains python interfaces for the following C++ classes:
+	I began by inspecting the Python interface for the classic cache base object, defined in \verb`gem5/src/mem/cache/Cache.py`. This file contains Python interfaces for the following C++ classes:
 	\begin{itemize}
 		\item \verb`Clusivity`, an enum type object used to specify the behavior of a cache in regard to upstream caches as ``mostly inclusive'' or ``mostly exclusive''.
 		\item \verb`WriteAllocator`, which is used for allocating memory for cache writes and invokes \verb`Parent.cache_line_size` to set its own \verb`block_size` attribute.
@@ -359,7 +373,11 @@ Cache::Cache(const CacheParams &p)
 	
 	From a cursory inspection of the \verb`Packet` source code in \verb`gem5/src/mem/packet.cc`, the \verb`Packet` class appears to be well-contained as well, with no evidence to suggest it would interfere with modification of higher-level objects.
 
-	\subsection*{Complicating factors}
+	\subsection*{Compilation time}
+
+	My initial attempts at modifying granularity definition in the Gem5 source code were limited somewhat by an unusually long compilation time. According to the Gem5 documentation, it is normal for compilation to take longer than 15 minutes \cite{gem5-build}. My system consistently took 20 minutes or more prior to even terminating with compilation errors, and longer for full compilation. Since system configurations such as the classic and ruby cache configs are implemented in Python and then run by the simulator, the simulator itself only needs to be compiled once, regardless of how often the configuration scripts are changed; so, the long build time is not typically an issue. However, since modifying and testing changes to the source code itself requires Gem5 to be recompiled each time modifications are made before those changes can be tested, a long build time makes the process of modifying Gem5's source code significantly more tedious---especially for such large changes that would require extensive debugging.
+
+	\subsection*{Limitations and outlook}
 
 	There are a few points of complication to attempting to modify Gem5's cache object source code, namely the implementation details of translating packet granularity, and the potential for errors caused by widespread access to system-level attributes.
 	
@@ -368,27 +386,29 @@ Cache::Cache(const CacheParams &p)
 	Gem5 does have excellent modularity at the configuration level, as far as the ability to mix-and-match components, but modification of these components' source code in regard to system-level attributes is complicated by the fact that most low-level objects inherit access to system-level attributes. This makes it challenging to isolate objects from attributes of the \verb`System` instance, and makes it unlikely that the line size of an individual cache could be modified without identifying and accounting for all reference to the \verb`System` object's line size at lower levels.
 
 	A cursory search using \verb`grep -r "p.system->cacheLineSize"` in \verb`gem5/src` shows only 11 references to \verb`p.system->cacheLineSize`, so replacing each of these instances could be doable. However, given the likelihood of unforeseen impacts on peripheral components, in practice this would likely be a much more daunting task to implement and troubleshoot.
-
-	\subsection*{Compilation time}
-
-	Furthermore, my attempts at modifying granularity definition in the Gem5 source code were limited by an unusually long compilation time. According to the Gem5 documentation, it is normal for compilation to take longer than 15 minutes \cite{gem5-build}, and my system consistently took 20 minutes or more prior to even terminating with compilation errors; longer for full compilation. System configurations such as the classic and ruby cache configurations are implemented in python and then run by the simulator, and thus the simulator itself only needs to be compiled once, regardless of how often the configuration scripts are changed, so the long build time is not typically an issue. However, since modifying and testing changes to the source code itself requires Gem5 to be recompiled each time modifications are made before those changes can be tested, a long build time makes the process of modifying Gem5's source code significantly more tedious---especially for such large changes that would require extensive debugging.
+	
+	In conjunction with Gem5's relatively long compilation time, this suggests that even barring unforeseen complications, modifying the Gem5 source code to allow for variable granularity would be a substantially challenging and time-consuming task.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion}
 
-\section{Results of the attempt at a Gem5 simulation}
+\section{Results of this research}
 
 	...
 
 	\subsection*{The classic cache}
 
+	...
+
 	\subsection*{The Ruby cache}
+
+	...
 
 	\subsection*{Source code and system-scope granularity}
 
-	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
+	\revise{(Summarize...)}
 
-	\revise{expand...}
+	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
 
 \section{Future work}
 
@@ -396,7 +416,7 @@ If one were to continue to pursue use of Gem5 for GC-caching research, my recomm
 
 If one wanted to more generally further the study of GC-caching through simulation, my suggestion would be a survey of other memory system simulation tools.
 
-\revise{(Characteristics to look for specifically, preview \& cite some)}
+\revise{(Describe what features to look for specifically, preview \& cite some options)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
