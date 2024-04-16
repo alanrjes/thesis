@@ -49,11 +49,44 @@ breaklines=true
 \mainmatter
 \pagestyle{fancyplain}
 
+\chapter{Introduction}
+
+\section{Significance}
+
+Computer caching is crucial to the efficient performance of data retrieval in modern computer memory systems. As processor technology improves and computers are able to generate requests for stored data significantly faster than those requests can be served, advancements in caching provide the valuable opportunity to improve memory access speed and therefore overall efficiency.
+
+The 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' introduced a cache configuration called the Granularity-Change Cache, which takes advantage of the granularity at which data is accessed in order to load additional data into the cache at little to no additional cost.
+
+Developing a simulation of a Granularity-Change cache would benefit research in computer caching by providing a tool to gain greater insight into the impacts and uses of spatial locality. Analysis using such a simulation could help determine the viability of granularity-change caches for implementation in real computer systems.
+
+To this effect, the 2022 thesis ``Simulating the Granularity-Change Caching Problem'' by Maxx Curtis explored the possibility of simulating a granularity-change cache using the powerful systems simulation platform Gem5. This work provided a foundation for studying granularity-change cache simulation by presenting implementation and testing of a potential granularity-change cache implementation in Gem5, and indicated that granularity-change cache simulation is an area where further research would be beneficial.
+
+\section{Approach}
+
+	% curtis findings
+	In describing suggestions for future work, Curtis states: \begin{quote}
+		At this stage of development, I recommend against using my implementation for further research into IBLP. ... If one only wanted to examine the viability of IBLP itself, then it would be fairly easy to use typical Cache objects to do so... by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency \cite{curtis}.
+	\end{quote}
+
+	Furthermore, the repository linked as containing the code used in the Curtis thesis does not contain any of said code, so expanding on the block cache implementation is not an option.
+
+	Curtis also suggests working towards an implementation of a granularity-change cache model that is compatible with more realistic processors than Gem5's simple CPU models. Since Gem5 has a wide variety of available CPU models, this is a matter of compatibility with the full array of cache features in Gem5, including response queues and cache coherence.
+
+	% approach
+	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem was to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation would be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
+
+\section{Results}
+
+Over multiple different attempted methods of implementing IBLP in Gem5, I uncovered evidence against the viability of each method of implementation. My attempt to implement a nestled cache structure using Gem5's modular classic cache objects revealed the dependence of cache line size on a system-level variable, and thus the impossibility of independently changing the cache line size within one of Gem5's typical caches. My look at a simple cache implementation in Gem5's Ruby memory subsystem revealed similar findings due to the similar dependence on a system object. Finally, my preliminary analysis of Gem5's source code for the classic cache objects provided mixed results that suggest the uncertain possibility and likely difficulty of modifying the Gem5 source code to support granularity change between caches.
+
+Overall, my research has provided strong evidence against the use of Gem5 to simulating the granularity-change caching problem. Between the findings of the Curtis thesis on the impracticality of a ground-up implementation of new CG-cache objects, and my findings on the complications to using existing Gem5 objects to imitate a granularity change, this exhausts the most direct approaches to implementing granularity-change caching in Gem5.
+
+
 \chapter{Background}
 
 \section{A crash course in computer caching}
 
-Computer memory is the fundamental component of digital systems that serves as a dynamic repository where data and instructions can be temporarily stored for quick access and retrieval during active processes. The much lower latency of memory requests compared to retrieval of data from a hard drive or SSD makes memory crucial to the efficient performance of computers.
+Computer memory is the fundamental component of digital systems that serves as a dynamic repository where data and instructions can be temporarily stored for quick access and retrieval during active processes. The much lower latency of memory requests compared to retrieval of data from a hard drive or SSD makes memory crucial to the efficient performance of modern computers.
 
 	\subsection*{The memory hierarchy}
 
@@ -75,24 +108,22 @@ Computer memory is the fundamental component of digital systems that serves as a
 	
 	Temporal locality applies to data that has been used recently, and therefore is typically more likely to be needed again than some arbitrary other piece of data. Temporal locality is central to many replacement policies, such as a the Least Recently Used (LRU) policy which, upon loading a new piece of data from main memory, chooses data in the cache to evict by which data was least recently requested by the processor.
 	
-	Spatial locality applies to data that is located physically near other useful data in memory. Caches operate on sections of data called lines (or blocks), where a cache's line size determines the granularity of the cache: higher granularity for a smaller line size and lower for a larger line size. A cache will load an entire line (usually 32, 64, or 128 bytes) when any piece of data stored within that line in requested. A cache's utilization of spatial locality corresponds to the line size of the cache; a larger line size loads more data which is located near the specific requested item, and thus populates the cache with this peripheral data that is spatially local.
+	Spatial locality applies to data that is located physically near other useful data in memory. Caches operate on sections of data called lines (or blocks), where a cache's line size determines the granularity of the cache. A cache will load an entire line (usually 32, 64, or 128 bytes) when any piece of data stored within that line in requested. A cache's utilization of spatial locality corresponds to the line size of the cache; a larger line size loads more data which is located near the specific requested item, and thus populates the cache with this peripheral data that is spatially local.
 
-	Due to the fixed amount of space available in a cache, there is a tradeoff between utilizing spatial locality versus temporal locality to populate a cache. Typical caches will utilize both forms of locality to some degree, since the methods of selecting for each type of locality are mutually dependent on each other. For example: a cache with high temporal locality may have a very small line size to minimize the amount of spatially local data admitted, but unless the size of all stored data is precisely a multiple of the cache line size, some excess spatially local data in each line will also be stored. Likewise, a cache with the largest possible line size, which stores only one line of data the same size as the entire cache, still requires an access to be made to some piece of data in a line in order to load that line into the cache, and therefore still contains some portion of temporally local data.
+%	\subsection*{Further concepts in caching}
 
-	\subsection*{Further concepts in caching}
-
-	A variety of other design choices impact cache performance, particularly in more complex multiprocessor systems. Cache coherence refers to protocols used to keep multiple caches that store the same data consistent with each other. Inclusive caches are caches which contain data also present in lower levels of memory, and which also require cache coherence with lower layers, whereas exclusive caches contain no duplicate data and thus require a method of tracking to prevent duplication.
-	
-	Although these concepts do appear peripherally in this thesis, the focus is on data locality, and thus a thorough understanding of further design factors is not necessary.
+%	A variety of other design choices impact cache performance, particularly in more complex multiprocessor systems. Cache coherence refers to protocols used to keep multiple caches that store the same data consistent with each other. Inclusive caches are caches which contain data also present in lower levels of memory, and which also require cache coherence with lower layers, whereas exclusive caches contain no duplicate data and thus require a method of tracking to prevent duplication.
 
 
 \section{The granularity-change caching problem}
 
-According the 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality  \cite{beckmann}. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change (GC) Caching Problem.
+According the 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality  \cite{beckmann}. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change Caching Problem.
 
-The GC Caching Problem describes a cache configuration with two layers of granularity at which data can be accessed, referred to as ``item granularity'' and ``block\footnote{The use of the term ``block'' in the context of the GC Caching Problem is separate from the common use of ``block'' as a synonym for ``line'', as mentioned prior. In this thesis, ``block'' will always refer to the GC-caching meaning, with the exception of a few cases of variable names quoted from preexisting code referring to the common meaning.} granularity'', with an item begin equivalent to a cache line and a block being equivalent to a group of multiple cache lines that are treated as as a single larger-granularity line, ``such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}.
+The Granularity-Change Caching Problem describes a cache configuration with two layers of granularity at which data can be accessed, referred to as ``item granularity'' and ``block\footnote{The use of the term ``block'' in the context of the granularity-change caching problem is separate from the common use of ``block'' as a synonym for ``line'', as mentioned prior. In this thesis, ``block'' will always refer to the granularity-change caching meaning, with the exception of a few cases of variable names quoted from preexisting code referring to the common meaning.} granularity'', with an item begin equivalent to a cache line and a block being equivalent to a group of multiple cache lines that are treated as as a single larger-granularity line, ``such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}.
 
-In regard to sub-sectioning blocks, the theoretical analysis in Beckmann et. al. finds that ``to achieve the best competitive ratio\footnote{A competitive ratio is a measurement used in theoretical analysis of cache replacement policies that compares a cache's actual eviction choices with the optimal choices.}, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}. Thus, in this thesis I will be focusing specifically on the subproblem that only involves loading entire blocks and individual items.
+The idea behind the granularity-change cache is to take advantage of an existing boundary between the granularity of a cache and main memory to load additional spatially local data that would otherwise be ignored. When an item is requested from memory, the entire page must be loaded, and since cache line size is typically smaller than memory page\footnote{A memory ``page'' is a section of memory, similar to a cache line but specific to lower-level main memory.} size, a portion of that page is ignored---wasting the opportunity to load additional data at little to no additional cost. Whereas using the full memory page by making the cache line size equal to the memory page size would cause spatially local data to dominate the cache, the layered granularity-change cache uses the item layer to maintain greater use of temporal locality while still benefiting from the no-additional-cost spatially local data in the block layer.
+
+In regard to loading a subset of a block, the theoretical analysis in Beckmann et. al. finds that ``to achieve the best competitive ratio, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}. A competitive ratio is a measurement used in theoretical analysis of cache replacement policies that compares a cache's actual eviction choices in practice (called the ``online algorithm'') with the optimal choices given full knowledge of future requests (called the ``offline algorithm''). The higher the competitive ratio of a cache, the closer its performance is to optimal. For the sake of focusing on the best model for improving cache performance, in this thesis I will be focusing specifically on the subproblem that only involves loading entire blocks and individual items.
 
 Beckmann et. al. describes a simple, deterministic replacement policy for this subproblem called Item-Block Layer Partitioning (IBLP).
 
@@ -110,17 +141,17 @@ Beckmann et. al. describes a simple, deterministic replacement policy for this s
 
 	This policy provides benefits of both spatial and temporal locality while reducing the tradeoff between the two. By using a separate LRU orderings for each layer, IBLP prevents temporally local data in the item layer from evicting spatially local block layer data.
 	
-	The block layer is neither inclusive nor exclusive of the item layer, so duplicate items may appear; this simplifies the cache's design by preventing need for coherence or exclusivity tracking. Duplicate data crowding the cache is not expected to have a major performance impact in general cases, since it would only occur if a significant amount of spatially local data was also temporally local, which would overall benefit the hit rate and thus counteract the negative impact caused by loss of cache space.
+	The block layer is neither inclusive nor exclusive of the item layer, meaning duplicate data may appear in both layers, but data in the item layer is not guaranteed to be present in the block layer. This simplifies the cache's design by preventing need for exclusivity tracking, and maintains the usefulness of the item layer by keeping its contents independent of the block layer \cite{beckmann}. Duplicate data crowding the cache is not expected to have a major performance impact in general cases, since it would only occur if a significant amount of spatially local data was also temporally local, which would overall benefit the hit rate and thus counteract the negative impact caused by loss of cache space.
 	
-	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis.
+	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis \cite{beckmann}.
 
-\section{Prior work simulating GC caching}
+\section{Prior work with granularity-change caching}
 
 In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Caching Problem'', by Maxx Curtis, follows-up the theoretical work of Beckmann et. al. on the granularity-change caching problem by providing a foray into practical simulation of the proposed cache model. Curtis provides a survey of two systems simulators, Zsim and Gem5, and a presents a custom implementation of a block Cache in Gem5 \cite{curtis}.
 
 	\subsection*{About the simulators}
 
-	Zsim is a ``fast and accurate microarchitectural simulation'' presented in 2013 \cite{zsim}. Although it showed promise as a tool for simulating GC-caching, Curtis finds that a heavy reliance on outsize libraries and lack of continuous support made it difficult and time-consuming to configure.
+	Zsim is a ``fast and accurate microarchitectural simulation'' presented in 2013 \cite{zsim}. Although it showed promise as a tool for simulating granularity-change caching, Curtis finds that a heavy reliance on outsize libraries and lack of continuous support made it difficult and time-consuming to configure.
 
 	Gem5 is an open-source computer systems simulation project with an active development community and emphasis on wide selection of modular system components such as CPU models. It contains two different detailed memory simulation subsystems. The Curtis thesis selects the classic memory subsystem of Gem5 to implement a ``granularity-aware'' block cache for use in IBLP simulation \cite{curtis}.
 
@@ -130,37 +161,39 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	\subsection*{Limitations}
 
-	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one suggested area for further research is in creating an implementation of a GC-cache that allows for use in more realistic system configurations, such as with Gem5's other more realistic processor models.
+	The ``Shortcomings'' section of Curtis explains that due to the time-consuming nature of this low-level implementation, the block cache is only usable in simple systems with a single cache level and ``Simple Timing CPU'', a ``unrealistic but very fast CPU model'' \cite{curtis}. Therefore, one suggested area for further research is in creating an implementation of a granularity-change cache that allows for use in more realistic system configurations, such as with Gem5's other more realistic processor models.
 
 	\subsection*{Tests}
 
-	Curtis tests three cache configurations against each other: a simple one-level cache of item granularity, a simple one-level cache using the custom block cache, and an IBLP cache constructed using a standard cache of item granularity in conjunction with a block cache.
+	Curtis tests three cache configurations against each other. The control group consists of a simple one-level cache of item granularity and a simple one-level cache using the custom block cache, and the experimental group is an IBLP cache constructed using a standard cache of item granularity in conjunction with a block cache.
 	
+	\vfill
 	\begin{figure}[h]
 		\centering
 		\includegraphics[width=5in]{figures/curtis_caches.png}
 		\caption{The three cache configurations tested by Curtis \cite{curtis}.}
 	\end{figure}
+	\vfill
 
 	Three benchmarks are used: iterative merge sort (high in spatial locality), randomized subset-sum (high in temporal locality), and recursive merge sort (a combination of both forms of locality).
 	
-	All testing uses an x86 system with Gem5's ``Simple Timing CPU''. Each memory system simulates a 64B line size and 4kiB memory page\footnote{A memory ``page'' is a section of memory, similar to a cache line but typically larger.} size, 8GiB of DDR3 for main memory, and a cache size of 512KiB. In IBLP caches, the 512KiB area is divided evenly between the item and block layers \cite{curtis}.
+	All testing uses an x86 system with Gem5's ``Simple Timing CPU''. Each memory system simulates a 64B line size and 4kiB memory page size, 8GiB of DDR3 for main memory, and a cache size of 512KiB. In IBLP caches, the 512KiB area is divided evenly between the item and block layers \cite{curtis}.
 
 	Each test script is given as input a file with 1 million randomly generated 8-byte values, and gives as output a randomly selected subset of the sorted result to prevent the writing of a large sequential output from skewing the data toward spatial locality \cite{curtis}.
 
 	\subsection*{Results}
 
-	Both merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache \cite{curtis}. Since this does not line up with the expectation of poor performance of the item cache for high spatial locality and poor performance of the block cache for high temporal locality, the results of these tests are inconclusive.
+	Both merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache \cite{curtis}. Since outcomes in the control groups do not align with the expectations of poor performance of the item cache for high spatial locality and poor performance of the block cache for high temporal locality, the results of these tests are inconclusive.
 
-	Furthermore, looking specifically at the hit rates of the individual layers of the IBLP cache, the three test scripts do not support the expectation of a positive corelation between high spatial locality and high relative utilization of the block layer.
+	Looking specifically at the hit rates of the individual layers of the IBLP cache, the three test scripts do not support the expectation of a positive corelation between high spatial locality and high relative utilization of the block layer.
 
-	Curtis suggests that these inconclusive results are due in part to the low granularity of the block layer in the IBLP cache, and insufficient memory workload of the test scripts compared to the caches' sizes. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
+	Curtis suggests that these inconclusive results are due in part to the coarse granularity of the block layer in the IBLP cache, and insufficient memory workload of the test scripts compared to the caches' sizes. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
 
 	\newpage
 	\null
 	\vfill
 
-	\begin{figure}[h]
+	\begin{figure}[H]
 		\centering
 		\includegraphics[height=2.8in]{figures/curtis_cache_hit_rates.png}
 		\caption{Hit rates resulting from tests of the three cache configurations \cite{curtis}.}
@@ -168,42 +201,13 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	\vfill
 
-	\begin{figure}[h]
+	\begin{figure}[H]
 		\centering
 		\includegraphics[height=2.8in]{figures/curtis_layer_hit_rates.png}
 		\caption{Hit rates for the item and block layers of the IBLP cache \cite{curtis}.}
 	\end{figure}
 
 	\vfill
-
-\chapter{Introduction}
-
-\section{Significance}
-
-Developing a simulation of a Granularity-Change cache would benefit research in computer caching by providing a tool to gain greater insight into the impacts and uses of spacial locality. Analysis using such a simulation could help determine the viability of granularity-change caches for implementation in real computer systems.
-
-The Curtis thesis provides a foundation for studying GC-cache simulation, and a jumping off point for further research into GC-cache implementation in Gem5. The inconclusive results of Curtis indicate that this is an area where further research would be beneficial.
-
-\section{Approach}
-
-	% curtis findings
-	In describing suggestions for future work, Curtis states: \begin{quote}
-		At this stage of development, I recommend against using my implementation for further research into IBLP. ... If one only wanted to examine the viability of IBLP itself, then it would be fairly easy to use typical Cache objects to do so... by creating a system with two caches, one for each layer, that differ in granularity and experience little to no intermediate latency \cite{curtis}.
-	\end{quote}
-
-	Furthermore, the repository linked as containing the code used in the Curtis thesis does not contain any of said code, so expanding on the block cache implementation is not an option.
-
-	Curtis also suggests working towards an implementation of a granularity-change cache model that is compatible with more realistic processors than Gem5's simple CPU models. Since Gem5 has a wide variety of available CPU models, this is a matter of compatibility with the full array of cache features in Gem5, including response queues and cache coherence.
-
-	% approach
-	With the results and suggestions of the Curtis thesis in mind, my approach to further research on the granularity-change caching problem was to build and test a modular implementation of IBLP using the existing Gem5 cache objects. Since the existing Gem5 caches are compatible with the full range of Gem5's features, an implementation using these caches as its foundation would be able to maintain these compatibilities, thereby eliminating the need for laborious re-implementation of Gem5's cache features from the ground up.
-
-\section{Results}
-
-Over multiple different attempted methods of implementing IBLP in Gem5, I uncovered evidence against the viability of each method of implementation. My attempt to implement a nestled cache structure using Gem5's modular classic cache objects revealed the dependence of cache line size on a system-level variable, and thus the impossibility of independently changing the cache line size within one of Gem5's typical caches. My look at a simple cache implementation in Gem5's Ruby memory subsystem revealed similar findings due to the similar dependence on a system object. Finally, my preliminary analysis of Gem5's source code for the classic cache objects provided mixed results that suggest the uncertain possibility and likely difficulty of modifying the Gem5 source code to support granularity change between caches.
-
-Overall, my research has provided strong evidence against the use of Gem5 to simulating the GC-caching problem. Between the findings of the Curtis thesis on the impracticality of a ground-up implementation of new CG-cache objects, and my findings on the complications to using existing Gem5 objects to imitate a granularity change, this exhausts the most direct approaches to implementing GC-caching in Gem5.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Attempting a modular IBLP implementation}
@@ -214,15 +218,15 @@ Gem5 is an open-source, community-led computer systems simulation project that d
 	...a modular platform for computer-system architecture research, encompassing system-level architecture as well as processor microarchitecture \cite{gem5-about}.
 \end{quote}
 
-Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}. It has an active development community and substantial documentation and resources, including a tutorial and extensive documentation on the gem5 website, automatically-generated API documentation, and a full introductory course based on curriculum from CS 752 and CS 757 at the University of Wisconsin-Madison \cite{gem5-docs}.
+Gem5 began as two separate projects, m5 at the University of Michigan and GEMS at the University of Wisconsin, until the two simulators were merged in 2011 \cite{gem5-about}. It has an active development community and substantial documentation and resources, including a tutorial and extensive documentation on the Gem5 website, automatically-generated API documentation, and a full introductory course based on curriculum from CS 752 and CS 757 at the University of Wisconsin-Madison \cite{gem5-docs}.
 
 I chose to use Gem5 to simulate a granularity-change cache due to the foundation and specific suggestions for future work provided by Curtis; in particular, the recommendation to use cache objects to examine the viability of IBLP \cite{curtis}.
 
 	\subsection*{Caching subsystems}
 
-	Due to its origins as a combination of m5 and GEMS, Gem5 contains two separate subsystems that can both be used to model caches. The classic cache model from m5 provides simple, modular functionality for multi-level caches, but with an inflexible MOESI cache coherence protocol. The Ruby cache model has more complex implementation details, with the ability to test customized cache coherence protocols.
-
-	Classic caches are the much simpler model to implement, as they only require object definitions in the Python config script \cite{gem5-tutorial}. On the other hand, Ruby caches require special files written in SLICC (Specification Language including Cache Coherence) to define coherence protocols \cite{gem5-ruby}. Furthermore, since Ruby's focus on cache coherence translates to a focus on multiprocessor systems running multithreaded programs, other components of a Ruby configuration are more complicated to include these additional features.
+	Due to its origins as a combination of m5 and GEMS, Gem5 contains two separate subsystems that can both be used to model caches. The primary difference between the two subsystems is their differing ability to model custom cache coherence protocols, the protocols used to keep multiple caches that store the same data consistent with each other in complex multiprocessor systems. Ruby also has extended functionality for modeling other more complex cache systems.
+	
+	Overall, the classic cache model from m5 provides simple, modular functionality for multi-level caches with an inflexible MOESI cache coherence protocol, whereas the Ruby cache model has more complex implementation details to allow implementation of customized cache coherence protocols. Specifically, classic caches are the much simpler model to implement because they only require object definitions in the Python config script \cite{gem5-tutorial}. On the other hand, Ruby caches require special files written in SLICC (Specification Language including Cache Coherence) to define coherence protocols \cite{gem5-ruby}. Furthermore, since Ruby's focus on cache coherence translates to a focus on multiprocessor systems running multithreaded programs, other components of a Ruby configuration are more complicated to include these additional features.
 
 	Since the IBLP does not require specialized customization of cache coherence protocols and simulating IBLP with multithreading was not my focus, I opted to use the classic cache subsystem for my initial implementation.
 
@@ -238,7 +242,7 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 
 	Since Gem5 is intended for systems research, it provides a thorough report of statistics from a simulation written to \verb`gem5/m5out/stats.txt` at the termination of the simulation. This includes statistics for every object that is a member of the System object.
 
-	For the purpose of analyzing a GC-cache simulation, \verb`stats.txt` provides hit and miss rate statistics for all caches in the system.
+	For the purpose of analyzing a granularity-change cache simulation, \verb`stats.txt` provides hit and miss rate statistics for all caches in the system.
 
 \section{Classic cache implementation}
 
@@ -258,14 +262,14 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 		\item \verb`run(self, binary)` sets the simulation up to run as a process, and runs it.
 	\end{itemize}
 
-	The specific commands for of most of these steps, except for \verb`setup_caches`, are adapted from the gem5 tutorial \cite{gem5-tutorial}.
+	The specific commands for of most of these steps, except for \verb`setup_caches`, are adapted from the Gem5 tutorial \cite{gem5-tutorial}.
 
 	\subsection*{Cache objects}
 
 	A basic classic cache configuration requires minor setup of cache objects and busses; this encompasses L1 data and instruction caches, which are specialized caches with ports specified in the System object, and a general L2 cache which I adapted into a nestled item and block cache:
 
 	\begin{itemize}
-		\item \verb`L1Cache`, \verb`DataCache`, and \verb`InstructionCache` are adapted from the gem5 basic caches tutorial to mimic the typical on-processor data and instruction caches in an ordinary system.
+		\item \verb`L1Cache`, \verb`DataCache`, and \verb`InstructionCache` are adapted from the Gem5 basic caches tutorial to mimic the typical on-processor data and instruction caches in an ordinary system.
 	
 		\item \verb`L2Cache` contains the attributes of a typical L2 cache that are shared by both item and block caches.
 	
@@ -288,7 +292,15 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 
 	The crucial limitation of my initial classic cache implementation is that it relies on Gem5 having a way, such as through a cache object attribute, to specify the line size for any given layer of memory.
 
-	Instead, Gem5 sets an attribute for line size at the level of the \verb`System` class. This prevents any possibly implementation of granularity-change caches in classic caches without modification of Gem5's \verb`System` and \verb`Cache` classes to allow specification of a larger line size for memory.
+	Instead, Gem5 sets an attribute for line size at the level of the \verb`System` class, and all cache objects connected to the system inherit that value. This prevents any possibly implementation of granularity-change caches in classic caches without modification of Gem5's \verb`System` and \verb`Cache` classes to allow specification of a larger line size for memory.
+
+	\subsection*{Packet access scope}
+
+	One possible workaround to the system-wide line size would be to access memory packets directly in the block cache and convert their granularity, such as is done in the Curtis block cache. However, the python level of implementation used for configs does not support directly accessing packets; it only allows bus and port attributes of the system to be connected in the config, and all actual packet manipulation is done by C++ methods packaged behind Gem5's object libraries.
+
+	\subsection*{Next steps}
+
+	My original goal, stemming from the suggestion against further low-level modification of Gem5's source code, was to create an IBLP implementation using only Gem5's existing memory system customization features---thereby maintaining compatibility with the rest of Gem5's simulation options. So, in order to exhaust all paths to such an implementation, I opted to next explore the Ruby memory subsystem. Ruby's more involved implementation process and wider range of customization options suggested the possibility of granularity modification features or opportunities for workarounds not present in the classic cache subsystem.
 
 
 \chapter{Exploring granularity workarounds in Gem5}
@@ -412,9 +424,9 @@ Cache::Cache(const CacheParams &p)
 
 \section{Future work}
 
-If one were to continue to pursue use of Gem5 for GC-caching research, my recommendation would be an approach between mine and that of Curtis, which would involve modification of the Gem5 source code to remove the cache line size from the system scope. This would require in-depth analysis of the Gem5 codebase, a glimpse of which is given in section 3.5, as well as C++ implementation for conversion of packets between granularities as Curtis did for part of the block cache. Given the scope of these changes, this would likely be a major project that would require familiarity with compiling, debugging, and testing a large open-source project.
+If one were to continue to pursue use of Gem5 for granularity-change caching research, my recommendation would be an approach between mine and that of Curtis, which would involve modification of the Gem5 source code to remove the cache line size from the system scope. This would require in-depth analysis of the Gem5 codebase, a glimpse of which is given in section 3.5, as well as C++ implementation for conversion of packets between granularities as Curtis did for part of the block cache. Given the scope of these changes, this would likely be a major project that would require familiarity with compiling, debugging, and testing a large open-source project.
 
-If one wanted to more generally further the study of GC-caching through simulation, my suggestion would be a survey of other memory system simulation tools.
+If one wanted to more generally further the study of granularity-change caching through simulation, my suggestion would be a survey of other memory system simulation tools.
 
 \revise{(Describe what features to look for specifically, preview \& cite some options)}
 
