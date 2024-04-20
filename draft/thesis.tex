@@ -44,7 +44,11 @@ breaklines=true
 % If your abstract is longer than a page, there may be a formatting issue.
 \chapter*{Abstract}
 
-...
+The 2021 paper ``Spatial Locality and Granularity Change in Caching'' presented the Granularity-Change Caching Problem, the study of a cache architecture in which the shift in data granularity between the cache and main memory is utilized to load additional spatially local data without additional cost. The paper provided theoretical analysis of the granularity-change caching problem and described the replacement policy Item-Block Layered Partitioning (IBLP) to implement a simple granularity-change cache \cite{beckmann}.
+
+To study the performance of granularity-change caching in practice, the 2022 Reed thesis ``Simulating the Granularity-Change Caching Problem'' used the open-source system simulator Gem5 to provide the first simulated implementation and analysis of an IBLP cache, and suggested areas for continued research toward a more realistic and versatile simulation \cite{curtis}.
+
+My research continues to build on the prior work in granularity-change cache simulation by introducing a new strategy to implement granularity-change caching in Gem5 and by evaluating the limitations of the three available approaches to this strategy. I find that this method of implementing a granularity-change cache in Gem5 is not possible without expanding the features of the Gem5 simulator as a whole, and provide a cursory look at what such modifications would involve.
 
 \mainmatter
 \pagestyle{fancyplain}
@@ -55,7 +59,7 @@ breaklines=true
 
 Computer caching is crucial to the efficient performance of data retrieval in modern computer memory systems. As processor technology improves and computers are able to generate requests for stored data significantly faster than those requests can be served, advancements in caching provide the valuable opportunity to improve memory access speed and therefore overall efficiency.
 
-The 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' introduced a cache configuration called the Granularity-Change Cache, which takes advantage of the granularity at which data is accessed in order to load additional data into the cache at little to no additional cost.
+The 2021 paper ``Spatial Locality and Granularity Change in Caching'' introduced a cache configuration called the Granularity-Change Cache, which takes advantage of the granularity at which data is accessed in order to load additional data into the cache at little to no additional cost.
 
 Developing a simulation of a Granularity-Change cache would benefit research in computer caching by providing a tool to gain greater insight into the impacts and uses of spatial locality. Analysis using such a simulation could help determine the viability of granularity-change caches for implementation in real computer systems.
 
@@ -117,7 +121,7 @@ Computer memory is the fundamental component of digital systems that serves as a
 
 \section{The granularity-change caching problem}
 
-According the 2021 paper ``Spatial Locality and the Granularity Change Caching Problem'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality  \cite{beckmann}. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change Caching Problem.
+According the 2021 paper ``Spatial Locality and Granularity Change in Caching'' by Beckmann et. al., spatial locality is much less well-studied than temporal locality  \cite{beckmann}. Beckmann et. al. aims to improve understanding of spatial locality through the introduction of the Granularity-Change Caching Problem.
 
 The Granularity-Change Caching Problem describes a cache configuration with two layers of granularity at which data can be accessed, referred to as ``item granularity'' and ``block\footnote{The use of the term ``block'' in the context of the granularity-change caching problem is separate from the common use of ``block'' as a synonym for ``line'', as mentioned prior. In this thesis, ``block'' will always refer to the granularity-change caching meaning, with the exception of a few cases of variable names quoted from preexisting code referring to the common meaning.} granularity'', with an item begin equivalent to a cache line and a block being equivalent to a group of multiple cache lines that are treated as as a single larger-granularity line, ``such that a cache can choose any subset of a block to load for the same cost as loading any individual item in the block'' \cite{beckmann}.
 
