@@ -406,30 +406,41 @@ Cache::Cache(const CacheParams &p)
 
 \section{Results of this research}
 
-	...
+	Based on my research on implementing IBLP in Gem5, I conclude that a high-level implementation of a granularity-change cache is not possible in Gem5 due to the system-level definition of line size and closed interface at the configuration level.
+	
+	An initial look at the Gem5 source code suggests that modifying Gem5 to support multi-granularity caches may be possible. I provide cursory analysis of the challenges involved to explore the viability of this as an approach for future research in granularity-change cache simulation.
 
 	\subsection*{The classic cache}
 
-	...
+	The original idea of a nestled classic cache is supported in Gem5's classic cache subsystem at the structural level, as shown by my initial implementation attempt. However, due to the system-level definition of cache line size preventing assignment of differing granularities to individual caches, the nestled cache structure is unable to represent the core functionality of different-granularity layers necessary for a granularity-change cache.
 
 	\subsection*{The Ruby cache}
 
-	...
+	Despite the Ruby subsystem's expanded set of features for memory customization, I found that since Ruby depends on the same system object as the the classic cache, it suffers from the same fundamental limitation as the classic cache due to the system-wide line size requirement.
 
 	\subsection*{Source code and system-scope granularity}
 
-	\revise{(Summarize...)}
+	My exploration of granularity definition in Gem5's source code revealed challenging interdependence of objects reliant on system-level attributes. On a cursory search, the system granularity attribute does not appear to have more references in the source code than could reasonably be located and individually modified. However, the likelihood of unanticipated impacts of these changes on other components in the system is high, and would likely require extensive troubleshooting. The relatively long build time of Gem5 adds some additional difficulty to this prospect.
 
-	Given the significant complication of modifying the source code of Gem5 caches to implement a granularity-change functionality and the lack of evidence of any simpler method of implementing granularity-change caching in Gem5, I have concluded that further work implementing IBLP in Gem5 in its current state is not a worthwhile pursuit.
+	Aside from removing the system cache line size attribute, packet translation between granularities would need to be implemented; this was already done by the Curtis thesis for the block cache, and thus must be reasonably doable. Incorporating this granularity translation into Gem5's existing cache objects may, however, introduce additional complications due to the greater complexity of Gem5's native caches compared to the Curtis block cache.
 
 \section{Future work}
 
-If one were to continue to pursue use of Gem5 for granularity-change caching research, my recommendation would be an approach between mine and that of Curtis, which would involve modification of the Gem5 source code to remove the cache line size from the system scope. This would require in-depth analysis of the Gem5 codebase, a glimpse of which is given in section 3.5, as well as C++ implementation for conversion of packets between granularities as Curtis did for part of the block cache. Given the scope of these changes, this would likely be a major project that would require familiarity with compiling, debugging, and testing a large open-source project.
+	Despite the inefficacy of Gem5 for the purpose of simulating the granularity-change caching with its current configuration features, further study of the granularity-change caching problem through simulation is still a promising area for future research. Future work could involve either building on my exploration of Gem5's source code to modify Gem5 with support for multi-granularity caches, or surveying other cache simulators and choosing one to develop a new granularity-change cache implementation for.
 
-If one wanted to more generally further the study of granularity-change caching through simulation, my suggestion would be a survey of other memory system simulation tools.
+	\subsection*{Continuing with Gem5}
 
-\revise{(Describe what features to look for specifically, preview \& cite some options)}
+	If one were to continue to pursue use of Gem5 for granularity-change caching research, my recommendation would be an approach between mine and that of Curtis, which would involve modification of the Gem5 source code to remove the cache line size from the system scope. Once support for custom cache granularity was implemented, a nestled cache similar to what I proposed in chapter 3 could be used to simulate a granularity-change cache.
+	
+	This approach would require in-depth analysis of the Gem5 codebase, a glimpse of which is given in section 3.5, as well as C++ implementation for conversion of packets between granularities as Curtis did for part of the block cache. Given the scope of these changes, this would likely be a major project that would require familiarity with compiling, debugging, and testing a large open-source project.
 
+	Emphasis should be put on maintaining support for Gem5's more realistic processors so that the simulation could be used for rigorous, realistic testing of performance using granularity-change caching.
+
+	\subsection*{Other simulation options for granularity-change caching}
+
+	If one wanted to more generally further the study of granularity-change caching through simulation, my suggestion would be a survey of other memory system simulation tools in terms of their applicable features. The 2020 paper ``A Survey of Cache Simulators'' by Brais et. al. provides a starting point for this route by comparing 28 popular simulators, including Gem5 and Zsim. 4 of those simulators---Gem5, Sniper, ESESC, and MacSim---had last been updated within a year of Brais et. al. being published, suggesting that these options had good ongoing support as of 2020 \cite{brais}.
+
+	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
 
