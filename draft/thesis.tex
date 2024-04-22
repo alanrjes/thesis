@@ -452,8 +452,11 @@ Cache::Cache(const CacheParams &p)
 
 	If one wanted to more generally further the study of granularity-change caching through simulation, my suggestion would be a survey of other memory system simulation tools in terms of their applicable features. The 2020 paper ``A Survey of Cache Simulators'' by Brais et. al. provides a starting point for this route by comparing 28 popular simulators, including Gem5 and Zsim. 4 of those simulators---Gem5, Sniper, ESESC, and MacSim---had last been updated within a year of Brais et. al. being published, suggesting that these options had good ongoing support as of 2020 \cite{brais}.
 
-\section{Key Takeaways}
+\section{Takeaways from the Process}
 
+	My work here should serve as a valuable reminder not to take for granted the existence of specific features of the tools needed for research. Over the course of this thesis, I had to readjust my goals repeatedly as I learned more about Gem5's cache objects and the specific limits of its system architecture. Despite Gem5 having excellent documentation on many fronts, there is very little information regarding the obscure but specifically crucial aspects of the simulator that are relevant to granularity-change caching. Therefore, researching the specific feature of cache granularity variability (or as it was, the lack thereof) in Gem5 largely involved the more time-consuming (but nonetheless time-tested) tactic of trial-and-error---moving forward on the assumption that a reasonable suggestion for future research was indeed possible until I reached a sufficient understanding of its failures to refute it. In this way, a thesis that was expected to conclude in testing and data analysis became yet another building block for the foundation of future research.
+
+	For anyone aiming to continue working on granularity-change cache simulation, or to conduct any research using tools that you don't have omniscient mastery of, I leave you with a reminder that in any genuine effort can be found some meaningful discovery---even if it's only the exhaustion of another dead-end. I hope that my efforts to uncover what \textit{doesn't} (and what might) work for simulating GC-caching helps in the pursuit of a strategy that will eventually succeed.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
