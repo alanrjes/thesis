@@ -238,7 +238,7 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 
 	A configuration of a system in Gem5 is defined by a Python file in the ``configs'' directory, which imports various Gem5 components for the processor, clock, memory, busses, and all other parts of the system. The code in the config file establishes the relationships between these components and prompts the start of the simulation.
 
-	Since a system to simulate is defined and run through such a config file, I will frequently refer to the primary Python implementation of a system as its config.
+	Since a system to simulate is defined and run through such a config file, I will refer to the primary Python implementation of a system as its config, and this level of implementation as config-level.
 
 	To run a config, the path to this file is given to the appropriate build command for the config's architecture, along with any arguments such as the path of the script to simulate; for example, running \verb`build/X86/gem5.opt configs/my_config.py` simulates the system defined in \verb`my_config.py` using the compilation of Gem5 for an X86 system with \verb`.opt` indicating both optimizations and debug messages are enabled.
 
