@@ -97,7 +97,7 @@ Computer memory is the fundamental component of digital systems that serves as a
 	A computer's various types of data storage make up the memory hierarchy. Layers of storage are arranged in tiers of the hierarchy based on size and access speed, with faster but smaller and more expensive layers of memory at the top of the hierarchy, and slower, larger storage at the bottom.
 	\begin{figure}[h]
     	\centering
-    	\includegraphics[width=4in]{figures/mem_hierarchy.jpg}
+    	\includegraphics[width=3.4in]{figures/mem_hierarchy.jpg}
     	\caption{A diagram of the memory hierarchy.}
 	\end{figure}
 
@@ -111,9 +111,11 @@ Computer memory is the fundamental component of digital systems that serves as a
 	
 	The purpose of caching is to reduce the number of accesses made to the main memory by storing select pieces of data that are most likely to be requested in the near future. When a piece of requested data is present in a cache, that is called a cache hit; when it is absent, it's a cache miss. Since caches are small and fast, intended to be accessed frequently at minimal cost, an important factor of cache design is how to best utilize the limited space they offer to optimize the hit rate, i.e. the percent of total requests for which the requested data is present in the cache.
 	
-	The algorithms used to optimize hit rate by determining which data to admit to and evict from a cache are called replacement policies. In theoretical analysis of cache replacement policies, a competitive ratio is a measurement that compares a cache's actual eviction choices in practice (the ``online algorithm'') with the optimal choices given full knowledge of future requests (the ``offline algorithm''). The lower the competitive ratio of a cache (to a minimum of 1), the closer its performance is to optimal. Replacement policies are designed using properties of data called spatial and temporal locality.
+	The algorithms used to optimize hit rate by determining which data to admit to and evict from a cache are called replacement policies. In theoretical analysis of cache replacement policies, a competitive ratio is a measurement of a cache's performance calculated by taking a measure such as the miss rate of the ``online algorithm'' (the cache's actual performance in practice), divided by the same measure taken of the ``offline algorithm'' (the optimal choices given full knowledge of future requests), such that a competitive ratio of 1 is optimal.
 
 	\subsection*{Data Locality}
+
+	Replacement policies use properties of data called spatial and temporal locality to anticipate which data is most likely to be requested.
 	
 	Temporal locality applies to data that has been used recently, and therefore is typically more likely to be needed again than some arbitrary other piece of data. Temporal locality is central to many replacement policies, such as a the Least Recently Used (LRU) policy which, upon loading a new piece of data from main memory, chooses data in the cache to evict by which data was least recently requested by the processor.
 	
@@ -127,9 +129,7 @@ The Granularity-Change Caching Problem describes a cache configuration with two 
 
 The idea behind the granularity-change cache is to take advantage of an existing boundary between the granularity of a cache and main memory to load additional spatially local data that would otherwise be ignored. When an item is requested from memory, the entire page must be loaded, and since cache line size is typically smaller than memory page size, a portion of that page is ignored---wasting the opportunity to load additional data at little to no additional cost. Whereas using the full memory page by making the cache line size equal to the memory page size would cause spatially local data to dominate the cache, the layered granularity-change cache uses the item layer to maintain greater use of temporal locality while still benefiting from the no-additional-cost spatially local data in the block layer.
 
-In regard to loading a subset of a block, the theoretical analysis in Beckmann et. al. finds that ``to achieve the best competitive ratio, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}. For the sake of focusing on the best model for improving cache performance, in this thesis I will be focusing specifically on the subproblem that only involves loading entire blocks and individual items.
-
-Beckmann et. al. describes a simple, deterministic replacement policy for this subproblem called Item-Block Layer Partitioning (IBLP).
+In regard to loading a subset of a block, the theoretical analysis in Beckmann et. al. finds that ``to achieve the best competitive ratio, one should load either an entire block or a single item, and nothing in between'' \cite{beckmann}. Beckmann et. al. describes a simple, deterministic replacement policy for the subproblem in which no partial blocks are loaded, called Item-Block Layer Partitioning (IBLP).
 
 	\subsection*{Item-Block Layered Partitioning}
 
@@ -137,17 +137,17 @@ Beckmann et. al. describes a simple, deterministic replacement policy for this s
 		The first layer, which serves each access to the cache, loads only the items that are accessed and evicts using the Least-Recently Used (LRU) replacement policy. The second layer, which only serves accesses that miss in the first layer, also uses the LRU policy for evictions, but loads and evicts at the granularity of entire blocks at a time \cite{beckmann}.
 	\end{quote}
 
+	This policy provides benefits of both spatial and temporal locality while reducing the tradeoff between the two. By using a separate LRU ordering for each layer, IBLP prevents temporally local data in the item layer from evicting spatially local block layer data.
+	
+	The block layer is neither inclusive nor exclusive of the item layer, meaning duplicate data may appear in both layers, but data in the item layer is not guaranteed to be present in the block layer. This simplifies the cache's design by preventing need for exclusivity tracking, and maintains the usefulness of the item layer by keeping its contents independent of the block layer \cite{beckmann}. Duplicate data crowding the cache is not expected to have a major performance impact in general cases, since it would only occur if a significant amount of spatially local data was also temporally local, which would overall benefit the hit rate and thus counteract the negative impact caused by loss of cache space.
+
 	\begin{figure}[h]
 		\centering
 		\includegraphics[width=2.75in]{figures/IBLP.png}
 		\caption{A diagram of a cache running IBLP \cite{beckmann}.}
 	\end{figure}
 
-	This policy provides benefits of both spatial and temporal locality while reducing the tradeoff between the two. By using a separate LRU orderings for each layer, IBLP prevents temporally local data in the item layer from evicting spatially local block layer data.
-	
-	The block layer is neither inclusive nor exclusive of the item layer, meaning duplicate data may appear in both layers, but data in the item layer is not guaranteed to be present in the block layer. This simplifies the cache's design by preventing need for exclusivity tracking, and maintains the usefulness of the item layer by keeping its contents independent of the block layer \cite{beckmann}. Duplicate data crowding the cache is not expected to have a major performance impact in general cases, since it would only occur if a significant amount of spatially local data was also temporally local, which would overall benefit the hit rate and thus counteract the negative impact caused by loss of cache space.
-	
-	There is no requirement for the relative sizes $i$ and $b$ of the item and block caches in IBLP. Furthermore, Beckmann et. al. determines the optimal layer sizes in IBLP to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis \cite{beckmann}.
+	Figure 2.2 illustrates the structure of an IBLP granularity-change cache, with an item layer of size $i$ and a block layer of size $b$. There is no requirement for the relative sizes $i$ and $b$ in IBLP, and Beckmann et. al. determines the optimal layer sizes to be unknown, since they depend on the relative spatial and temporal locality of a particular trace, and recommends further analysis \cite{beckmann}.
 
 \section{Prior Work Simulating GC Caching}
 
@@ -187,11 +187,11 @@ In 2022, the Reed College thesis titled ``Simulating the Granularity-Change Cach
 
 	Figure 2.4 shows merge sort scripts result in a a hit rate near $100\%$ for all three cache types, and randomized subset-sum results in a hit rate near $99.5\%$ for the item and block caches and near $95.5\%$ for the IBLP cache.
 	
-	The near-perfect hit rates across all tests in the control group indicate a flaw in the experimental design, since the known properties of simple single-part caches would suggest that finer-granularity caches should perform significantly worse on more spatially local data, and vice versa. The results of the experimental IBLP cache therefore can't be reliably compared to the control, and so are inconclusive. Curtis suggests that this is likely due to too small of a data set in comparison to available cache space \cite{curtis}.
+	The near-perfect hit rates across all tests in the control group, seen in Figure 2.4, indicate a flaw in the experimental design since the known properties of simple single-part caches would suggest that finer-granularity caches should perform significantly worse on more spatially local data, and vice versa. The results of the experimental IBLP cache therefore can't be reliably compared to the control, and so are inconclusive. Curtis suggests that this is likely due to too small of a data set in comparison to available cache space \cite{curtis}.
 
 	Looking specifically at the hit rates of the individual layers of the IBLP cache in Figure 2.5, the three test scripts do not support the expectation of a positive corelation between high spatial locality and high relative utilization of the block layer. Due to the data set issues encountered with the control group, this does not conclusively refute the theoretical expectations of IBLP cache performance, but suggests a need for further research to understand contributing factors.
 	
-	Curtis suggests that the internal results of IBLP may be due in part to the coarse granularity of the block layer, and insufficient memory workload of the test scripts compared to the caches' sizes \cite{curtis}. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
+	Curtis suggests that the internal results of IBLP shown in Figure 2.5 may be due in part to the coarse granularity of the block layer, and insufficient memory workload of the test scripts compared to the caches' sizes \cite{curtis}. These factors are thus important to keep in mind when designing future tests to measure performance of granularity-change caches.
 
 	\newpage
 	\null
@@ -248,9 +248,15 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 
 	For the purpose of analyzing a granularity-change cache simulation, \verb`stats.txt` provides hit and miss rate statistics for all caches in the system.
 
-\section{Classic Cache Implementation}
+\section{Approach to Nesting Classic Caches for IBLP}
 
-	I began by implementing a nested cache structure using classic Gem5 caches. This involved first building a simple cache configuration following the Gem5 documentation's ``Getting Started'' tutorial, then modifying the cache bus configuration to support a nested block layer and writing a wrapper program to perform trials and collect data from the simulation (see Appendix A for code).
+The intention of this implementation was to model IBLP using existing Gem5 caches. This approach would operate only on the configuration level without any source code modifications, since Gem5's established caches all have config-level interfaces with access to detailed customization options. By using Gem5's established cache objects, this approach would maintain compatibility with the full range of Gem5's simulation options. Additionally, operating only on the configuration level would greatly reduce the difficulty and time required for implementation, allowing more time for testing and analysis.
+
+To do this, the block and item layers would both be simulated using classic caches of different granularities, and the block layer would be nested within\footnote{The nesting description is not in reference to physical allocation of space, but rather Gem5's class architecture for the cache interfaces.} the item layer, with latency between layers set appropriately.
+
+\section{Nested Classic Cache Implementation}
+
+	I began implementing the nested cache structure by building a simple cache configuration following the Gem5 documentation's ``Getting Started'' tutorial \cite{gem5-tutorial}, then modified the cache bus configuration to support a nested block layer. To support this, I also implemented a simple system within which the cache could operate and a wrapper script to run the simulation and collect statistics (see Appendix A for full code).
 
 	\subsection*{System Class}
 
@@ -325,9 +331,11 @@ I chose to use Gem5 to simulate a granularity-change cache due to the foundation
 
 	Ruby's emphasis on highly configurable memory means it is mostly used specifically for research on cache coherence or otherwise complex interconnected memory systems. For my purpose, a simple but realistic memory system is sufficient to model IBLP, so most of the features of a Ruby cache system are unnecessary. However, implementation of a GC-capable cache in Ruby would provide countless options for future research studying the intersection of granularity change in caches with other complicating variables.
 
-	\subsection*{Cache Coherence Specification}
-
 	Ruby specifies cache coherence protocols using ``Specification Language for Implementing Cache Coherence'' (SLICC). These files are written in the ``src'' directory, and have to be compiled with a new build of Gem5, unlike configs. They do not provide any interaction with memory allocation that would allow for manipulation of cache granularity.
+
+	\subsection*{Approach to Ruby}
+
+	My implementation goals for Ruby were broadly the same as for the classic caches: simulate IBLP with a config by manipulating existing Gem5 cache objects and their attributes. However, given the outcome of the classic cache implementation, I took a more analytical approach to the Ruby subsystem---this time starting with a strategic search for indicators that supported or opposed the possibility of a system with mixed granularity caches, rather than jumping into coding the implementation.
 
 	\subsection*{Ruby Architecture}
 
